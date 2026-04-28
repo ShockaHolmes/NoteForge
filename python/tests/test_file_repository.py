@@ -18,7 +18,10 @@ def test_file_repository_writes_and_reads_frontmatter(tmp_path: Path) -> None:
     text = saved_path.read_text(encoding="utf-8")
 
     assert text.startswith("---\n")
+    assert "---\n\nThis is note content." in text
     assert "title: Sample Note" in text
+    assert "created: " in text
+    assert "modified: " in text
     assert "tags: [school, python]" in text
 
     notes = list(repository.list_notes())
