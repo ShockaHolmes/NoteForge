@@ -28,6 +28,105 @@ python3 notes0.py create
 
 ```
 
+## Acceptance Checks (notes0)
+
+Run these from this directory (`python/`):
+
+```bash
+# Help output
+python3 notes0.py help
+
+# Missing command error
+python3 notes0.py
+
+# Unknown command error
+python3 notes0.py frobnicate
+```
+
+Expected behavior:
+- `python3 notes0.py help` prints usage and available commands.
+- `python3 notes0.py` exits with code `1` and prints a missing-command error.
+- Unknown commands (for example `frobnicate`) exit with code `1` and print a clear error that includes supported commands.
+
+### One-Command Smoke Test
+
+You can validate all three checks automatically:
+
+```bash
+python3 smoke_test_notes0.py
+```
+
+Expected result:
+- Exit code `0` with `PASS: notes0 acceptance smoke tests`.
+- Exit code `1` with failing check details if any behavior regresses.
+
+## Starter Code Decisions (Keep/Change/Replace)
+
+The team should use this as baseline guidance while moving from starter code to full Phase 1 features:
+
+- Keep:
+	- CLI skeleton flow (`setup -> parse args -> dispatch -> finish`) in `notes0.py`.
+	- Centralized help and exit handling in `notes0.py`.
+	- YAML front matter parsing idea in `notes1.py` as a temporary parser.
+
+- Change:
+	- Command handling from simple `if/elif` branching to a command map/module-based command handlers.
+	- Error messaging to be consistent, explicit, and testable across all commands.
+	- Notes directory setup to support `init` behavior and configurable paths.
+
+- Replace:
+	- The minimal YAML parser in `notes1.py` with a robust YAML library-based parser.
+	- One-file scripts with a package structure (`src/` style modules for CLI, services, and storage).
+	- Ad-hoc print-based validation with unit-tested validation and typed data structures.
+
+## Phase 1 Project Folder Structure
+
+The Phase 1 starter structure now separates CLI flow from storage concerns:
+
+```
+python/
+	src/
+		notes_app/
+			cli/
+				commands/
+			models/
+			repositories/
+			services/
+	tests/
+```
+
+Short layout explanation:
+- `cli/`: parses commands and prints output; it does not read/write files directly.
+- `models/`: domain objects (for example, `Note`).
+- `repositories/`: storage adapters and interfaces (filesystem lives here).
+- `services/`: business logic/use cases that depend on repository interfaces.
+- `tests/`: verifies service behavior independently from filesystem/CLI.
+
+Shared `Note` model:
+- lives in `src/notes_app/models/note.py`
+- supports `id`, `title`, `created`, `modified`, `tags`, and `content`
+- exposes `to_dict()` / `from_dict()` for shared application and API use
+- exposes `to_metadata_dict()` / `from_metadata_dict()` for YAML frontmatter boundaries
+
+Try the package-based CLI starter:
+
+```bash
+PYTHONPATH=src python3 -m notes_app.cli.main help
+PYTHONPATH=src python3 -m notes_app.cli.main create "My Note" "hello from phase 1"
+PYTHONPATH=src python3 -m notes_app.cli.main list
+```
+
+The package CLI now follows the same direction as `notes1.py` list behavior:
+- notes are persisted as markdown files with YAML frontmatter metadata
+- `list` prints filename, title, created timestamp, and tags
+
+Run tests with pytest:
+
+```bash
+cd python
+python3 -m pytest
+```
+
 ## Phase 2 Focus
 
 Add REST + web support for both:

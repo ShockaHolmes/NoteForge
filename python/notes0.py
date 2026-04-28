@@ -23,18 +23,23 @@ def setup():
     return notes_dir
 
 
-def show_help():
+def get_program_name():
+    """Return the executable name used to start this script."""
+    return Path(sys.argv[0]).name or "notes0.py"
+
+
+def show_help(program_name):
     """Display help information."""
     help_text = """
 Future Proof Notes Manager v0.0
 
-Usage: notes0.py [command]
+Usage: {} [command]
 
 Available commands:
   help    - Display this help information
 
 Notes directory: {}
-    """.format(Path.home() / ".notes")
+    """.format(program_name, Path.home() / ".notes")
     print(help_text.strip())
 
 
@@ -46,25 +51,27 @@ def finish(exit_code=0):
 def main():
     """Main entry point for the notes CLI application."""
     # Setup
-    notes_dir = setup()
+    setup()
+    program_name = get_program_name()
 
     # Parse command-line arguments
     if len(sys.argv) < 2:
         # No command provided
-        print("Error: No command provided.", file=sys.stderr)
-        print("Usage: notes0.py [command]", file=sys.stderr)
-        print("Try 'notes0.py help' for more information.", file=sys.stderr)
+        print("Error: Missing command.", file=sys.stderr)
+        print(f"Usage: {program_name} [command]", file=sys.stderr)
+        print(f"Try '{program_name} help' for more information.", file=sys.stderr)
         finish(1)
 
     command = sys.argv[1].lower()
 
     # Process command
     if command == "help":
-        show_help()
+        show_help(program_name)
         finish(0)
     else:
         print(f"Error: Unknown command '{command}'", file=sys.stderr)
-        print("Try 'notes0.py help' for more information.", file=sys.stderr)
+        print("Supported commands: help", file=sys.stderr)
+        print(f"Try '{program_name} help' for more information.", file=sys.stderr)
         finish(1)
 
 
