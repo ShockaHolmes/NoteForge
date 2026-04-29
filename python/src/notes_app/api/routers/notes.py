@@ -84,6 +84,23 @@ def update_note(
     return _to_response(note)
 
 
+@router.put("/{note_id}", response_model=NoteResponse)
+def replace_note(
+    note_id: str,
+    body: NoteCreateRequest,
+    service: NoteService = Depends(get_note_service),
+) -> NoteResponse:
+    note = service.update_note(
+        note_id=note_id,
+        title=body.title,
+        tags=tuple(body.tags),
+        content=body.content,
+    )
+    if note is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Note '{note_id}' not found.")
+    return _to_response(note)
+
+
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_note(
     note_id: str,

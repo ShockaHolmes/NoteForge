@@ -1,12 +1,18 @@
 """Use-case layer for dataset assets."""
 
+import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import datetime, timezone
 
 from notes_app.models.dataset import Dataset
 from notes_app.repositories.dataset_repository import DatasetRepository
 from notes_app.services.asset_service import AssetService
+
+
+_LOG = logging.getLogger(__name__)
+_PROFILE_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="dataset-profile")
 
 
 class DatasetService(AssetService[Dataset]):
@@ -36,7 +42,9 @@ class DatasetService(AssetService[Dataset]):
             tags=tags,
         )
         if file_bytes is not None and original_filename:
-            return self._repository.save_with_file(dataset, file_bytes, original_filename)
+            saved = self._repository.save_with_file(dataset, file_bytes, original_filename)
+            self._enqueue_profile_job(saved.id)
+            return saved
         self._repository.save(dataset)
         return dataset
 
@@ -76,6 +84,43 @@ class DatasetService(AssetService[Dataset]):
         if not deleted:
             return None
         return existing
+
+    def preview_dataset(
+        self,
+        dataset_id: str,
+        limit: int,
+    ) -> tuple[Dataset, dict[str, object]] | None:
+        dataset = self._repository.get_by_id(dataset_id)
+        if dataset is None:
+            return None
+        preview = self._repository.preview(dataset, limit)
+        return dataset, preview
+
+    def profile_dataset(
+        self,
+        dataset_id: str,
+    ) -> tuple[Dataset, dict[str, object]] | None:
+        dataset = self._repository.get_by_id(dataset_id)
+        if dataset is None:
+            return None
+        profile = self._repository.profile(dataset)
+        return dataset, profile
+
+    def _enqueue_profile_job(self, dataset_id: str) -> None:
+        """Queue background profiling so uploads do not block on long profiling work."""
+        _PROFILE_EXECUTOR.submit(self._run_profile_job, dataset_id)
+
+    def _run_profile_job(self, dataset_id: str) -> None:
+        """Compute and persist profile data in sidecar metadata."""
+        dataset = self._repository.get_by_id(dataset_id)
+        if dataset is None:
+            return
+        try:
+            profile = self._repository.profile(dataset)
+            self._repository.save_profile(dataset, profile)
+        except Exception:
+            # Profiling failures should not remove or corrupt original dataset files.
+            _LOG.exception("Background profiling failed for dataset '%s'", dataset_id)
 
     # ------------------------------------------------------------------
     # AssetService[Dataset] interface

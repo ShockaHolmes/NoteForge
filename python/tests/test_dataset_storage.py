@@ -1,10 +1,13 @@
 """Tests for dataset metadata, repository, and service behavior."""
 
 from datetime import datetime, timezone
+import time
+from typing import Callable
 import yaml
 from pathlib import Path
 
 import pytest
+import notes_app.services.dataset_service as dataset_service_module
 
 from notes_app.models.dataset import Dataset
 from notes_app.models.dataset import DatasetSchemaField
@@ -401,3 +404,98 @@ def test_sidecar_yaml_is_valid_and_round_trips(tmp_path: Path) -> None:
     assert isinstance(data["tags"], list)
     assert data["created"] is not None
     assert data["modified"] is not None
+
+
+class _FakeExecutor:
+    def __init__(self) -> None:
+        self.calls: list[
+            tuple[Callable[..., object], tuple[object, ...], dict[str, object]]
+        ] = []
+
+    def submit(self, fn, *args, **kwargs):
+        self.calls.append((fn, args, kwargs))
+        return object()
+
+
+def test_service_create_with_file_enqueues_async_profile_without_blocking(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = FileDatasetRepository(tmp_path)
+    service = DatasetService(repo)
+    fake_executor = _FakeExecutor()
+    monkeypatch.setattr(dataset_service_module, "_PROFILE_EXECUTOR", fake_executor)
+
+    started = time.perf_counter()
+    dataset = service.create_dataset(
+        "Async Profile",
+        file_bytes=b"id,name\n1,Alice\n2,Bob\n",
+        original_filename="async.csv",
+    )
+    elapsed = time.perf_counter() - started
+
+    assert dataset.path == "async.csv"
+    assert elapsed < 0.5
+    assert len(fake_executor.calls) == 1
+    _, args, _ = fake_executor.calls[0]
+    assert args == (dataset.id,)
+
+
+def test_async_profile_job_persists_profile_into_sidecar(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = FileDatasetRepository(tmp_path)
+    service = DatasetService(repo)
+    fake_executor = _FakeExecutor()
+    monkeypatch.setattr(dataset_service_module, "_PROFILE_EXECUTOR", fake_executor)
+
+    dataset = service.create_dataset(
+        "Profile Save",
+        file_bytes=b"id,amount\n1,10.5\n2,20.0\n",
+        original_filename="profile-save.csv",
+    )
+    assert len(fake_executor.calls) == 1
+
+    fn, args, kwargs = fake_executor.calls[0]
+    fn(*args, **kwargs)
+
+    sidecar_path = tmp_path / "profile-save.csv.dataset.yml"
+    sidecar = yaml.safe_load(sidecar_path.read_text(encoding="utf-8"))
+    assert sidecar.get("profile") is not None
+    assert sidecar["profile"]["rowCount"] == 2
+    assert sidecar["profile"]["source"] in ("computed", "sidecar")
+
+    # Original raw file remains intact
+    assert (tmp_path / "profile-save.csv").read_bytes() == b"id,amount\n1,10.5\n2,20.0\n"
+    assert dataset.id == "profile-save"
+
+
+def test_failed_async_profile_job_does_not_delete_dataset_files(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = FileDatasetRepository(tmp_path)
+    service = DatasetService(repo)
+    fake_executor = _FakeExecutor()
+    monkeypatch.setattr(dataset_service_module, "_PROFILE_EXECUTOR", fake_executor)
+
+    dataset = service.create_dataset(
+        "Profile Failure",
+        file_bytes=b"id\n1\n",
+        original_filename="profile-failure.csv",
+    )
+
+    raw_path = tmp_path / "profile-failure.csv"
+    sidecar_path = tmp_path / "profile-failure.csv.dataset.yml"
+    assert raw_path.exists()
+    assert sidecar_path.exists()
+
+    def _boom(_dataset):
+        raise RuntimeError("profiling exploded")
+
+    monkeypatch.setattr(repo, "profile", _boom)
+
+    fn, args, kwargs = fake_executor.calls[0]
+    fn(*args, **kwargs)
+
+    assert raw_path.exists()
+    assert sidecar_path.exists()
+    assert dataset.id == "profile-failure"

@@ -27,3 +27,18 @@ class DatasetRepository(AssetRepository[Dataset]):
         Returns the updated Dataset with ``path`` and ``size_bytes`` filled in.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def preview(self, dataset: Dataset, limit: int) -> dict[str, object]:
+        """Return a preview payload for the dataset's raw file."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def profile(self, dataset: Dataset) -> dict[str, object]:
+        """Return profiling data for a dataset."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_profile(self, dataset: Dataset, profile: dict[str, object]) -> None:
+        """Persist profiling data back into the dataset sidecar metadata."""
+        raise NotImplementedError

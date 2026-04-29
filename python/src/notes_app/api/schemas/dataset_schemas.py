@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -46,6 +47,33 @@ class DatasetMetadataSummaryResponse(BaseModel):
 class DatasetUploadResponse(BaseModel):
     id: str
     metadata: DatasetMetadataSummaryResponse
+
+
+class DatasetPreviewResponse(BaseModel):
+    id: str
+    format: str | None = None
+    limit: int
+    headers: list[str] | None = None
+    rows: list[list[str]] | None = None
+    records: list[Any] | None = None
+
+
+class DatasetProfileColumnResponse(BaseModel):
+    name: str
+    inferred_type: str = Field(alias="inferredType")
+    missing_values: int = Field(alias="missingValues")
+
+    model_config = {"populate_by_name": True}
+
+
+class DatasetProfileResponse(BaseModel):
+    id: str
+    format: str | None = None
+    source: str = "computed"
+    row_count: int = Field(alias="rowCount")
+    columns: list[DatasetProfileColumnResponse] = Field(default_factory=list)
+
+    model_config = {"populate_by_name": True}
 
 
 class DatasetCreateRequest(BaseModel):

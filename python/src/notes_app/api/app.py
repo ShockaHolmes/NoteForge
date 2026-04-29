@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from notes_app.api.routers import datasets, notes
+from notes_app.api.routers import datasets, notes, search
 
 
 def create_app() -> FastAPI:
@@ -14,7 +14,10 @@ def create_app() -> FastAPI:
 
     app.include_router(notes.router, prefix="/api/v1")
     app.include_router(datasets.router, prefix="/api/v1")
+    app.include_router(search.router, prefix="/api/v1")
+    app.include_router(notes.router, prefix="/api")
     app.include_router(datasets.router, prefix="/api")
+    app.include_router(search.router, prefix="/api")
 
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:

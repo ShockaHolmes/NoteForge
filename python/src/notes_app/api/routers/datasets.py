@@ -1,8 +1,14 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 
-from notes_app.api.dependencies import get_dataset_service
+from notes_app.api.dependencies import (
+    get_dataset_service,
+    require_dataset_delete_role,
+    require_dataset_upload_role,
+)
 from notes_app.api.schemas.dataset_schemas import (
+    DatasetProfileResponse,
     DatasetMetadataSummaryResponse,
+    DatasetPreviewResponse,
     DatasetResponse,
     DatasetSchemaField,
     DatasetUploadResponse,
@@ -75,6 +81,7 @@ async def create_dataset(
     author: str = Form(default=""),
     tags: str = Form(default="", description="Comma-separated list of tags"),
     file: UploadFile | None = File(default=None),
+    _role: str = Depends(require_dataset_upload_role),
     service: DatasetService = Depends(get_dataset_service),
 ) -> DatasetUploadResponse:
     """Create a dataset (multipart/form-data). The ``file`` field is optional.
@@ -98,6 +105,79 @@ async def create_dataset(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     return _to_upload_response(dataset)
+
+
+@router.get("/{dataset_id}/preview", response_model=DatasetPreviewResponse)
+def preview_dataset(
+    dataset_id: str,
+    limit: int = Query(5, ge=1, le=1000, description="Number of rows/records to preview"),
+    service: DatasetService = Depends(get_dataset_service),
+) -> DatasetPreviewResponse:
+    try:
+        result = service.preview_dataset(dataset_id, limit)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset '{dataset_id}' not found.",
+        )
+
+    dataset, preview = result
+    return DatasetPreviewResponse(
+        id=dataset.id,
+        format=dataset.format or None,
+        limit=limit,
+        headers=preview.get("headers") if isinstance(preview.get("headers"), list) else None,
+        rows=preview.get("rows") if isinstance(preview.get("rows"), list) else None,
+        records=preview.get("records") if isinstance(preview.get("records"), list) else None,
+    )
+
+
+@router.get("/{dataset_id}/profile", response_model=DatasetProfileResponse)
+def profile_dataset(
+    dataset_id: str,
+    service: DatasetService = Depends(get_dataset_service),
+) -> DatasetProfileResponse:
+    try:
+        result = service.profile_dataset(dataset_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset '{dataset_id}' not found.",
+        )
+
+    dataset, profile = result
+    source = str(profile.get("source") or "computed")
+    row_count = profile.get("rowCount")
+    columns = profile.get("columns") if isinstance(profile.get("columns"), list) else []
+    return DatasetProfileResponse(
+        id=dataset.id,
+        format=dataset.format or None,
+        source=source,
+        row_count=int(row_count) if isinstance(row_count, int) else 0,
+        columns=columns,
+    )
 
 
 @router.get("/{dataset_id}", response_model=DatasetResponse)
@@ -139,6 +219,7 @@ def update_dataset(
 @router.delete("/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_dataset(
     dataset_id: str,
+    _role: str = Depends(require_dataset_delete_role),
     service: DatasetService = Depends(get_dataset_service),
 ) -> None:
     result = service.delete_dataset(dataset_id)
