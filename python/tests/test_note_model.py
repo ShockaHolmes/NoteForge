@@ -22,6 +22,7 @@ def test_note_to_dict_includes_shared_fields() -> None:
     assert data == {
         "id": "note-123",
         "title": "Shared Note",
+        "author": "",
         "created": ISO_CREATED,
         "modified": ISO_MODIFIED,
         "tags": ["python", "phase-1"],
@@ -53,6 +54,7 @@ def test_note_metadata_conversion_supports_yaml_boundary() -> None:
     metadata = {
         "id": "note-456",
         "title": "Frontmatter Note",
+        "author": "",
         "created": ISO_CREATED,
         "modified": ISO_MODIFIED,
         "tags": ["yaml", "cli"],

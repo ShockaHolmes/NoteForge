@@ -1,17 +1,24 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from notes_app.models.asset import Asset, AssetType
+
 
 @dataclass(frozen=True)
-class Note:
+class Note(Asset):
     """Domain entity representing one note."""
 
     id: str
     title: str
     created: datetime
     modified: datetime
+    author: str = ""
     tags: tuple[str, ...] = ()
     content: str = ""
+
+    @property
+    def asset_type(self) -> AssetType:
+        return AssetType.NOTE
 
     @property
     def slug(self) -> str:
@@ -24,6 +31,7 @@ class Note:
         title: str,
         content: str,
         tags: tuple[str, ...] = (),
+        author: str = "",
     ) -> "Note":
         now = datetime.now(timezone.utc)
         return Note(
@@ -31,6 +39,7 @@ class Note:
             title=title,
             created=now,
             modified=now,
+            author=author,
             tags=tags,
             content=content,
         )
@@ -39,6 +48,7 @@ class Note:
         return {
             "id": self.id,
             "title": self.title,
+            "author": self.author,
             "created": self._to_iso(self.created),
             "modified": self._to_iso(self.modified),
             "tags": list(self.tags),
@@ -51,6 +61,7 @@ class Note:
         title = str(data.get("title") or note_id)
         created = cls._from_iso(data.get("created"))
         modified = cls._from_iso(data.get("modified"), fallback=created)
+        author = str(data.get("author") or "")
         tags_value = data.get("tags", [])
         tags = cls._normalize_tags(tags_value)
         content = str(data.get("content") or "")
@@ -59,6 +70,7 @@ class Note:
             title=title,
             created=created,
             modified=modified,
+            author=author,
             tags=tags,
             content=content,
         )
@@ -67,6 +79,7 @@ class Note:
         return {
             "id": self.id,
             "title": self.title,
+            "author": self.author,
             "created": self._to_iso(self.created),
             "modified": self._to_iso(self.modified),
             "tags": list(self.tags),

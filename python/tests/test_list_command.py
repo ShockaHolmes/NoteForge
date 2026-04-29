@@ -19,6 +19,11 @@ class InMemoryNoteRepository(NoteRepository):
     def get_by_id(self, note_id: str) -> Note | None:
         return next((n for n in self._notes if n.id == note_id), None)
 
+    def delete_by_id(self, note_id: str) -> bool:
+        before = len(self._notes)
+        self._notes = [note for note in self._notes if note.id != note_id]
+        return len(self._notes) != before
+
 
 def test_run_list_renders_notes1_style_output() -> None:
     note = Note(

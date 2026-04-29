@@ -5,11 +5,14 @@ from notes_app.models.note import Note
 
 def render_frontmatter(note: Note) -> str:
     metadata = note.to_metadata_dict()
-    tags_str = ", ".join(str(tag) for tag in metadata["tags"])
+    raw_tags = metadata.get("tags", [])
+    tags: list[object] = raw_tags if isinstance(raw_tags, list) else []
+    tags_str = ", ".join(str(tag) for tag in tags)
     return (
         "---\n"
         f"id: {metadata['id']}\n"
         f"title: {metadata['title']}\n"
+        f"author: {metadata['author']}\n"
         f"created: {metadata['created']}\n"
         f"modified: {metadata['modified']}\n"
         f"tags: [{tags_str}]\n"
@@ -31,7 +34,7 @@ def parse_note_text(slug: str, text: str) -> Note:
     if yaml_end == -1:
         return Note.create(note_id=slug, title=slug, content=text)
 
-    metadata: dict[str, str] = {}
+    metadata: dict[str, object] = {}
     for line in lines[1:yaml_end]:
         stripped = line.strip()
         if ":" in stripped:
@@ -41,7 +44,9 @@ def parse_note_text(slug: str, text: str) -> Note:
     body = "\n".join(lines[yaml_end + 1 :]).lstrip("\n")
 
     metadata.setdefault("id", slug)
-    metadata["tags"] = _parse_tags(metadata.get("tags", ""))
+    raw_tags = metadata.get("tags", "")
+    metadata["tags"] = _parse_tags(raw_tags if isinstance(raw_tags, str) else "")
+    metadata.setdefault("author", "")
 
     return Note.from_metadata_dict(metadata, content=body)
 

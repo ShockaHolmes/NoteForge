@@ -31,3 +31,10 @@ class FileNoteRepository(NoteRepository):
             return None
         note_text = note_path.read_text(encoding="utf-8")
         return parse_note_text(note_id, note_text)
+
+    def delete_by_id(self, note_id: str) -> bool:
+        note_path = self._notes_dir / f"{note_id}.md"
+        if not note_path.exists():
+            return False
+        note_path.unlink()
+        return True
