@@ -30,6 +30,24 @@ class DatasetResponse(BaseModel):
     version: int = 1
 
 
+class DatasetMetadataSummaryResponse(BaseModel):
+    title: str
+    format: str | None = None
+    path: str | None = None
+    row_count: int | None = Field(default=None, alias="rowCount")
+    column_count: int | None = Field(default=None, alias="columnCount")
+    tags: list[str] = Field(default_factory=list)
+    created: datetime
+    modified: datetime
+
+    model_config = {"populate_by_name": True}
+
+
+class DatasetUploadResponse(BaseModel):
+    id: str
+    metadata: DatasetMetadataSummaryResponse
+
+
 class DatasetCreateRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     tags: list[str] = Field(default_factory=list)

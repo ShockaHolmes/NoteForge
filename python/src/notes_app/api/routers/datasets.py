@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 
 from notes_app.api.dependencies import get_dataset_service
 from notes_app.api.schemas.dataset_schemas import (
+    DatasetMetadataSummaryResponse,
     DatasetResponse,
     DatasetSchemaField,
+    DatasetUploadResponse,
     DatasetUpdateRequest,
 )
 from notes_app.models.dataset import Dataset
@@ -40,6 +42,22 @@ def _to_response(dataset: Dataset) -> DatasetResponse:
     )
 
 
+def _to_upload_response(dataset: Dataset) -> DatasetUploadResponse:
+    return DatasetUploadResponse(
+        id=dataset.id,
+        metadata=DatasetMetadataSummaryResponse(
+            title=dataset.title,
+            format=dataset.format or None,
+            path=dataset.path or None,
+            row_count=dataset.row_count or None,
+            column_count=dataset.column_count or None,
+            tags=list(dataset.tags),
+            created=dataset.created,
+            modified=dataset.modified,
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -51,14 +69,14 @@ def list_datasets(
     return [_to_response(d) for d in service.list_datasets()]
 
 
-@router.post("", response_model=DatasetResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DatasetUploadResponse, status_code=status.HTTP_201_CREATED)
 async def create_dataset(
     title: str = Form(..., min_length=1, max_length=200),
     author: str = Form(default=""),
     tags: str = Form(default="", description="Comma-separated list of tags"),
     file: UploadFile | None = File(default=None),
     service: DatasetService = Depends(get_dataset_service),
-) -> DatasetResponse:
+) -> DatasetUploadResponse:
     """Create a dataset (multipart/form-data). The ``file`` field is optional.
     Accepted file types: CSV, JSON."""
     tag_tuple = tuple(t.strip() for t in tags.split(",") if t.strip())
@@ -77,9 +95,9 @@ async def create_dataset(
         )
     except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
-    return _to_response(dataset)
+    return _to_upload_response(dataset)
 
 
 @router.get("/{dataset_id}", response_model=DatasetResponse)

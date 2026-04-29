@@ -172,6 +172,9 @@ def test_save_with_file_stores_csv_unchanged(tmp_path: Path) -> None:
     assert updated.path == "data.csv"
     assert updated.size_bytes == len(csv_bytes)
     assert updated.format == "csv"
+    assert updated.row_count == 2
+    assert updated.column_count == 2
+    assert [field.name for field in updated.schema_fields] == ["id", "name"]
 
 
 def test_save_with_file_stores_relative_path_only(tmp_path: Path) -> None:
@@ -194,6 +197,81 @@ def test_save_with_file_stores_json_unchanged(tmp_path: Path) -> None:
 
     assert (tmp_path / "records.json").read_bytes() == json_bytes
     assert updated.format == "json"
+    assert updated.row_count == 1
+    assert updated.column_count == 2
+    assert [field.name for field in updated.schema_fields] == ["id", "name"]
+
+
+def test_save_with_file_inspects_json_array_fields(tmp_path: Path) -> None:
+    repo = FileDatasetRepository(tmp_path)
+    dataset = Dataset.create("ds-json-array", "JSON Array Dataset")
+    json_bytes = b'[{"id": 1, "name": "Alice"}, {"id": 2, "email": "b@example.com"}]'
+
+    updated = repo.save_with_file(dataset, json_bytes, "users.json")
+
+    assert updated.row_count == 2
+    assert updated.column_count == 3
+    assert [field.name for field in updated.schema_fields] == ["id", "name", "email"]
+
+    sidecar = yaml.safe_load((tmp_path / "users.json.dataset.yml").read_text(encoding="utf-8"))
+    assert sidecar["rowCount"] == 2
+    assert sidecar["columnCount"] == 3
+    assert [field["name"] for field in sidecar["schema"]] == ["id", "name", "email"]
+
+
+def test_save_with_file_inspects_json_object_fields(tmp_path: Path) -> None:
+    repo = FileDatasetRepository(tmp_path)
+    dataset = Dataset.create("ds-json-object", "JSON Object Dataset")
+    json_bytes = b'{"dataset": "sales", "year": 2026, "active": true}'
+
+    updated = repo.save_with_file(dataset, json_bytes, "summary.json")
+
+    assert updated.row_count == 1
+    assert updated.column_count == 3
+    assert [field.name for field in updated.schema_fields] == ["dataset", "year", "active"]
+
+
+def test_save_with_file_invalid_json_returns_clear_error(tmp_path: Path) -> None:
+    repo = FileDatasetRepository(tmp_path)
+    dataset = Dataset.create("ds-invalid-json", "Invalid JSON")
+    invalid_json = b'{"id": 1, "name": "Alice"'
+
+    with pytest.raises(ValueError, match="Invalid JSON file"):
+        repo.save_with_file(dataset, invalid_json, "broken.json")
+
+
+def test_save_with_file_inspects_csv_columns_and_row_count(tmp_path: Path) -> None:
+    repo = FileDatasetRepository(tmp_path)
+    dataset = Dataset.create("ds-report", "Report")
+    csv_bytes = b"order_id,amount,order_date\n1,5.0,2026-01-01\n2,9.1,2026-01-02\n"
+
+    updated = repo.save_with_file(dataset, csv_bytes, "report.csv")
+
+    assert updated.row_count == 2
+    assert updated.column_count == 3
+    assert [field.name for field in updated.schema_fields] == [
+        "order_id",
+        "amount",
+        "order_date",
+    ]
+
+    sidecar = yaml.safe_load((tmp_path / "report.csv.dataset.yml").read_text(encoding="utf-8"))
+    assert sidecar["rowCount"] == 2
+    assert sidecar["columnCount"] == 3
+    assert [field["name"] for field in sidecar["schema"]] == [
+        "order_id",
+        "amount",
+        "order_date",
+    ]
+
+
+def test_save_with_file_csv_decode_error_is_clear(tmp_path: Path) -> None:
+    repo = FileDatasetRepository(tmp_path)
+    dataset = Dataset.create("ds-bad-encoding", "Bad Encoding")
+    invalid_utf8_csv = b"id,name\n1,\xff\n"
+
+    with pytest.raises(ValueError, match="not valid UTF-8"):
+        repo.save_with_file(dataset, invalid_utf8_csv, "bad.csv")
 
 
 def test_save_with_file_rejects_unsupported_extension(tmp_path: Path) -> None:

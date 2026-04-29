@@ -14,6 +14,7 @@ def create_app() -> FastAPI:
 
     app.include_router(notes.router, prefix="/api/v1")
     app.include_router(datasets.router, prefix="/api/v1")
+    app.include_router(datasets.router, prefix="/api")
 
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:

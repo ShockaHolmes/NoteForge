@@ -1,6 +1,17 @@
-# Canonical dataset sidecar metadata schema example
-# File name convention: <dataset-filename>.dataset.yml
+# Canonical dataset sidecar metadata example.
+# Sidecar file naming convention:
+#   <dataset-file-name>.dataset.yml
+# Example:
+#   sales-2026-q1.csv.dataset.yml
+#
+# NOTES FOR DEVELOPERS:
+# - Keep `path` relative to the datasets folder (never absolute).
+# - Timestamps should be UTC ISO 8601 (Z suffix).
+# - Copy this file and replace values for your dataset.
 
+# -------------------------
+# Required sidecar fields
+# -------------------------
 id: ds_01jq9z9em8g2
 assetType: dataset
 title: Sales Q1 2026
@@ -11,14 +22,9 @@ tags:
   - sales
   - finance
   - quarterly
-status: active
-priority: 3
 format: csv
-encoding: utf-8
 path: sales-2026-q1.csv
-sizeBytes: 842193
 rowCount: 15230
-columnCount: 7
 schema:
   - name: order_id
     type: string
@@ -29,13 +35,13 @@ schema:
   - name: order_date
     type: datetime
     nullable: false
-profile:
-  inferredAt: 2026-03-13T10:46:12Z
-  nullCounts:
-    order_id: 0
-    amount: 0
-    order_date: 0
-source:
-  kind: upload
-  originalFilename: sales-2026-q1.csv
+
+# -------------------------
+# Optional extension fields
+# -------------------------
+encoding: utf-8
+sizeBytes: 842193
+columnCount: 7
+status: active
+priority: 3
 version: 1
