@@ -19,6 +19,10 @@ class NoteService:
     def list_notes(self) -> list[Note]:
         return list(self._repository.list_notes())
 
+    def get_note(self, note_id: str) -> Note | None:
+        slug = note_id.removesuffix(".md")
+        return self._repository.get_by_id(slug)
+
     @staticmethod
     def _slugify(title: str) -> str:
         lowered = title.strip().lower()

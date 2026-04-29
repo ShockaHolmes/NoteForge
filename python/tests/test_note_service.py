@@ -13,6 +13,9 @@ class InMemoryNoteRepository(NoteRepository):
     def list_notes(self):
         return list(self._notes)
 
+    def get_by_id(self, note_id: str) -> Note | None:
+        return next((n for n in self._notes if n.id == note_id), None)
+
 
 def test_service_lists_titles_without_filesystem() -> None:
     repository = InMemoryNoteRepository()

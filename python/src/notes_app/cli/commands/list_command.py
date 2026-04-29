@@ -11,7 +11,7 @@ def run_list(service: NoteService) -> str:
         lines.append("")
         lines.append(f"{note.slug}.md")
         lines.append(f"  Title: {note.title}")
-        lines.append(f"  Created: {note.created.isoformat()}")
+        lines.append(f"  Modified: {note.modified.isoformat()}")
         if note.tags:
             lines.append(f"  Tags: {', '.join(note.tags)}")
 

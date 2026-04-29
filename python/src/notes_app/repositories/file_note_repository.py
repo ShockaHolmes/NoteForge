@@ -24,3 +24,10 @@ class FileNoteRepository(NoteRepository):
             note_text = path.read_text(encoding="utf-8")
             notes.append(parse_note_text(path.stem, note_text))
         return notes
+
+    def get_by_id(self, note_id: str) -> Note | None:
+        note_path = self._notes_dir / f"{note_id}.md"
+        if not note_path.exists():
+            return None
+        note_text = note_path.read_text(encoding="utf-8")
+        return parse_note_text(note_id, note_text)

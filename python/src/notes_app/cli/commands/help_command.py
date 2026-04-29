@@ -5,8 +5,10 @@ def render_help(program_name: str = "python -m notes_app.cli.main") -> str:
         "Commands:\n"
         "  help  Show this help text\n"
         "  list  List notes with metadata\n"
-        "  create <title> <content>  Create a note\n\n"
+        "  create <title> <content>  Create a note\n"
+        "  read <id>  Display a note by id or filename\n\n"
         "Examples:\n"
         f"  {program_name} create \"My Note\" \"hello world\"\n"
         f"  {program_name} list\n"
+        f"  {program_name} read my-note\n"
     )

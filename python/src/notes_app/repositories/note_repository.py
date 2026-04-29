@@ -14,3 +14,7 @@ class NoteRepository(ABC):
     @abstractmethod
     def list_notes(self) -> Iterable[Note]:
         raise NotImplementedError
+
+    @abstractmethod
+    def get_by_id(self, note_id: str) -> Note | None:
+        raise NotImplementedError
