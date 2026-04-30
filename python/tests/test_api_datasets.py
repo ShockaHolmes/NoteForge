@@ -95,7 +95,7 @@ def test_post_api_datasets_invalid_json_returns_clear_error(
         files={"file": ("broken.json", invalid_json, "application/json")},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 400
     assert response.json()["detail"] == "Invalid JSON file. Please upload valid JSON."
 
 

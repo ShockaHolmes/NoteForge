@@ -1,202 +1,444 @@
 # Future Proof Notes - Python
 
-Python implementation track for the `future-proof` notes manager.
+Python implementation of the `future-proof` notes manager, covering Phase 1 (CLI) and Phase 2 (REST API + datasets + backup).
 
-## Phase 1 Focus
+---
 
-Implement core note management features:
-- Create, read, update, delete (CRUD) text notes
-- Store notes as markdown files in `~/.notes/notes/`
-- Support basic metadata (title, created/modified timestamps, tags) in YAML frontmatter
-- Implement a simple CLI for managing notes
-- Implement a basic search function that searches note content and metadata
+## Quick Start
 
-But to get started, you'll need to read the python files here. they are Starter classes, and you can run them to see how they work. They are not complete, but they will give you a good starting point for your implementation. You can also refer to the Java implementation for guidance on how to structure your code and implement the required features.
-
-```bash
-# Show help
-python3 notes0.py help
-
-# No command (shows error)
-python3 notes0.py
-
-# Unknown command (shows error)
-python3 notes0.py create
-
-# Or as an executable:
-./python/notes0.py help
-
-```
-
-## Acceptance Checks (notes0)
-
-Run these from this directory (`python/`):
-
-```bash
-# Help output
-python3 notes0.py help
-
-# Missing command error
-python3 notes0.py
-
-# Unknown command error
-python3 notes0.py frobnicate
-```
-
-Expected behavior:
-- `python3 notes0.py help` prints usage and available commands.
-- `python3 notes0.py` exits with code `1` and prints a missing-command error.
-- Unknown commands (for example `frobnicate`) exit with code `1` and print a clear error that includes supported commands.
-
-### One-Command Smoke Test
-
-You can validate all three checks automatically:
-
-```bash
-python3 smoke_test_notes0.py
-```
-
-Expected result:
-- Exit code `0` with `PASS: notes0 acceptance smoke tests`.
-- Exit code `1` with failing check details if any behavior regresses.
-
-## Starter Code Decisions (Keep/Change/Replace)
-
-The team should use this as baseline guidance while moving from starter code to full Phase 1 features:
-
-- Keep:
-	- CLI skeleton flow (`setup -> parse args -> dispatch -> finish`) in `notes0.py`.
-	- Centralized help and exit handling in `notes0.py`.
-	- YAML front matter parsing idea in `notes1.py` as a temporary parser.
-
-- Change:
-	- Command handling from simple `if/elif` branching to a command map/module-based command handlers.
-	- Error messaging to be consistent, explicit, and testable across all commands.
-	- Notes directory setup to support `init` behavior and configurable paths.
-
-- Replace:
-	- The minimal YAML parser in `notes1.py` with a robust YAML library-based parser.
-	- One-file scripts with a package structure (`src/` style modules for CLI, services, and storage).
-	- Ad-hoc print-based validation with unit-tested validation and typed data structures.
-
-## Phase 1 Project Folder Structure
-
-The Phase 1 starter structure now separates CLI flow from storage concerns:
-
-```
-python/
-	src/
-		notes_app/
-			cli/
-				commands/
-			models/
-			repositories/
-			services/
-	tests/
-```
-
-Short layout explanation:
-- `cli/`: parses commands and prints output; it does not read/write files directly.
-- `models/`: domain objects (for example, `Note`).
-- `repositories/`: storage adapters and interfaces (filesystem lives here).
-- `services/`: business logic/use cases that depend on repository interfaces.
-- `tests/`: verifies service behavior independently from filesystem/CLI.
-
-Shared `Note` model:
-- lives in `src/notes_app/models/note.py`
-- supports `id`, `title`, `created`, `modified`, `tags`, and `content`
-- exposes `to_dict()` / `from_dict()` for shared application and API use
-- exposes `to_metadata_dict()` / `from_metadata_dict()` for YAML frontmatter boundaries
-
-Try the package-based CLI starter:
-
-```bash
-PYTHONPATH=src python3 -m notes_app.cli.main help
-PYTHONPATH=src python3 -m notes_app.cli.main create "My Note" "hello from phase 1"
-PYTHONPATH=src python3 -m notes_app.cli.main list
-```
-
-The package CLI now follows the same direction as `notes1.py` list behavior:
-- notes are persisted as markdown files with YAML frontmatter metadata
-- `list` prints filename, title, created timestamp, and tags
-
-Run tests with pytest:
+### Prerequisites
 
 ```bash
 cd python
-python3 -m pytest
+python3 -m venv ../.venv
+source ../.venv/bin/activate
+pip install -r requirements.txt   # fastapi, uvicorn, pyyaml, pytest, etc.
 ```
 
-## Phase 2 Focus
+### Run the CLI
 
-Add REST + web support for both:
-- text notes
-- dataset files (`.csv`, `.json`) for Data Engineer workflows
+```bash
+cd python
+PYTHONPATH=src python -m notes_app.cli.main help
+```
 
-## Dataset Support (CSV/JSON)
+### Start the API server
 
-Use filesystem-first storage with sidecar YAML metadata.
+```bash
+cd python
+PYTHONPATH=src uvicorn notes_app.api.app:app --reload
+# Interactive docs: http://localhost:8000/docs
+```
 
-Example layout:
+---
+
+## Storage Layout
+
+All data lives under `~/.notes/` by default.
 
 ```
 ~/.notes/
-	notes/
-		2026-03-13-my-note.note
-	datasets/
-		sales-2026-q1.csv
-		sales-2026-q1.dataset.yml
-		customer-events.json
-		customer-events.dataset.yml
+├── notes/
+│   ├── 2026-04-30-my-first-note.md          # note markdown + YAML frontmatter
+│   └── 2026-04-30-meeting-summary.md
+└── datasets/
+    ├── sales-2026-q1.csv                    # raw data file — never rewritten
+    ├── sales-2026-q1.dataset.yml            # sidecar metadata (id, title, schema …)
+    ├── customer-events.json
+    └── customer-events.dataset.yml
 ```
 
-Dataset sidecar fields (minimum):
-- `id`, `title`, `author`, `created`, `modified`, `tags`
-- `format` (`csv` or `json`)
-- `path` (relative to `datasets/`)
-- `rowCount`
-- `schema` (list of `{name, type}`)
+Override the default paths with environment variables:
 
-Canonical spec example:
-- [docs/dataset-metadata-schema.example.yml](../docs/dataset-metadata-schema.example.yml)
-
-## Phase 2 API Endpoints
-
-```
-GET    /api/notes
-POST   /api/notes
-GET    /api/notes/:id
-PUT    /api/notes/:id
-DELETE /api/notes/:id
-
-GET    /api/datasets
-POST   /api/datasets             # Upload CSV/JSON
-GET    /api/datasets/:id
-DELETE /api/datasets/:id
-GET    /api/datasets/:id/preview # First N rows
-GET    /api/datasets/:id/profile # Column stats and inferred types
-
-GET    /api/search?q=query       # Search notes + datasets
+```bash
+export NOTES_HOME=/data/my-notes
+export DATASETS_HOME=/data/my-datasets
 ```
 
-## Python Technical Guidance
+### Note file format
 
-- Framework: Flask or FastAPI
-- Validation/parsing:
-	- `csv` (stdlib)
-	- `json` (stdlib)
-	- `PyYAML` for sidecar metadata
-- Upload handling:
-	- enforce allowed types (`.csv`, `.json`)
-	- enforce max upload size
-	- ensure UTF-8 decoding
-- Profiling jobs:
-	- run async profiling after upload (thread pool or task queue)
-	- persist profile output back into sidecar metadata
+Each note is a Markdown file with a YAML frontmatter block:
 
-## Integration Notes
+```markdown
+---
+id: 2026-04-30-my-first-note
+title: My First Note
+created: 2026-04-30T10:00:00
+modified: 2026-04-30T10:05:00
+tags: [work, ideas]
+---
 
-- Keep a shared `Asset` model (`note` or `dataset`) behind service/repository interfaces.
-- Store raw datasets unchanged; never rewrite uploaded source by default.
+Body text goes here.
+```
+
+### Dataset sidecar format
+
+Each uploaded dataset gets a companion `.dataset.yml` file:
+
+```yaml
+id: sales-2026-q1
+title: Sales Q1 2026
+author: alice
+created: 2026-04-30T10:00:00
+modified: 2026-04-30T10:00:00
+tags: [sales, quarterly]
+format: csv
+path: sales-2026-q1.csv
+rowCount: 500
+columnCount: 4
+schema:
+  - name: date
+    type: string
+  - name: region
+    type: string
+  - name: revenue
+    type: float
+  - name: units
+    type: integer
+```
+
+See [docs/dataset-metadata-schema.example.yml](../docs/dataset-metadata-schema.example.yml) for the full spec.
+
+---
+
+## Phase 1 — CLI
+
+### All commands
+
+```bash
+PYTHONPATH=src python -m notes_app.cli.main <command> [args]
+```
+
+| Command | Description |
+|---|---|
+| `help` | Show help text |
+| `create <title> <content>` | Create a new note |
+| `list` | List all notes |
+| `read <id>` | Display a note by id or filename |
+| `search <query>` | Search title, tags, and body |
+| `update <id> [--title "…"] [--tags "t1,t2"] [--content "…"]` | Update a note |
+| `delete <id>` | Delete a note |
+| `backup [output-dir]` | Zip backup of notes + datasets |
+| `restore <backup.zip>` | Restore from a zip backup |
+
+### Examples
+
+```bash
+# Create a note
+PYTHONPATH=src python -m notes_app.cli.main create "Meeting notes" "Discussed Q2 roadmap"
+
+# List all notes
+PYTHONPATH=src python -m notes_app.cli.main list
+
+# Read a note (use the id shown by list)
+PYTHONPATH=src python -m notes_app.cli.main read 2026-04-30-meeting-notes
+
+# Search across title, tags, and body
+PYTHONPATH=src python -m notes_app.cli.main search roadmap
+
+# Update title and tags
+PYTHONPATH=src python -m notes_app.cli.main update 2026-04-30-meeting-notes \
+  --title "Q2 Meeting Notes" --tags "work,q2"
+
+# Update content only
+PYTHONPATH=src python -m notes_app.cli.main update 2026-04-30-meeting-notes \
+  --content "Updated content here"
+
+# Delete a note
+PYTHONPATH=src python -m notes_app.cli.main delete 2026-04-30-meeting-notes
+
+# Backup to the current directory
+PYTHONPATH=src python -m notes_app.cli.main backup
+
+# Backup to a specific folder
+PYTHONPATH=src python -m notes_app.cli.main backup /tmp/backups
+
+# Restore from a backup zip
+PYTHONPATH=src python -m notes_app.cli.main restore /tmp/backups/notes-backup-2026-04-30T120000.zip
+```
+
+---
+
+## Phase 2 — REST API
+
+Start the server before making any requests:
+
+```bash
+cd python
+PYTHONPATH=src uvicorn notes_app.api.app:app --reload
+```
+
+Both `/api/` and `/api/v1/` prefixes are supported for every endpoint.
+
+### Role-based access
+
+Pass an `X-Role` header on requests that require elevated privileges.
+
+| Role | Can do |
+|---|---|
+| `viewer` (default) | Read notes, datasets, search |
+| `editor` | Everything above + upload datasets |
+| `data-engineer` | Everything above + delete datasets |
+| `admin` | Full access |
+
+---
+
+### Notes API
+
+#### List all notes
+
+```bash
+curl http://localhost:8000/api/notes
+```
+
+```json
+[
+  {
+    "id": "2026-04-30-meeting-notes",
+    "title": "Meeting notes",
+    "created": "2026-04-30T10:00:00",
+    "modified": "2026-04-30T10:05:00",
+    "tags": ["work"],
+    "content": "Discussed Q2 roadmap"
+  }
+]
+```
+
+#### Create a note
+
+```bash
+curl -X POST http://localhost:8000/api/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title": "New idea", "content": "Build something great", "tags": ["ideas"]}'
+```
+
+Returns `201 Created` with the new note object.
+
+#### Get a note by id
+
+```bash
+curl http://localhost:8000/api/notes/2026-04-30-new-idea
+```
+
+Returns `404` with `{"detail": "Note '...' not found."}` if the id does not exist.
+
+#### Update a note (partial)
+
+```bash
+curl -X PATCH http://localhost:8000/api/notes/2026-04-30-new-idea \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated idea", "tags": ["ideas", "priority"]}'
+```
+
+Only the fields provided are changed. Omitted fields are left as-is.
+
+#### Replace a note (full)
+
+```bash
+curl -X PUT http://localhost:8000/api/notes/2026-04-30-new-idea \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Replaced", "content": "Completely new content", "tags": []}'
+```
+
+#### Delete a note
+
+```bash
+curl -X DELETE http://localhost:8000/api/notes/2026-04-30-new-idea
+```
+
+Returns `204 No Content` on success.
+
+#### Search notes
+
+```bash
+curl "http://localhost:8000/api/notes/search?q=roadmap"
+```
+
+```json
+[
+  {
+    "id": "2026-04-30-meeting-notes",
+    "title": "Meeting notes",
+    "assetType": "note",
+    "context": "body: ...Discussed Q2 roadmap..."
+  }
+]
+```
+
+Returns `400` if `q` is missing or empty.
+
+---
+
+### Datasets API
+
+#### List all datasets
+
+```bash
+curl http://localhost:8000/api/datasets
+```
+
+#### Upload a CSV or JSON dataset (requires `editor` role or higher)
+
+```bash
+curl -X POST http://localhost:8000/api/datasets \
+  -H "X-Role: editor" \
+  -F "title=Sales Q1 2026" \
+  -F "author=alice" \
+  -F "tags=sales,quarterly" \
+  -F "file=@/path/to/sales-q1.csv"
+```
+
+```json
+{
+  "id": "sales-2026-q1",
+  "metadata": {
+    "title": "Sales Q1 2026",
+    "format": "csv",
+    "path": "sales-2026-q1.csv",
+    "rowCount": 500,
+    "columnCount": 4,
+    "tags": ["sales", "quarterly"],
+    "created": "2026-04-30T10:00:00",
+    "modified": "2026-04-30T10:00:00"
+  }
+}
+```
+
+- Returns `400` for unsupported file types or malformed content.
+- Returns `403` if the role is insufficient.
+- The `file` field is optional — omit it to register metadata-only (sidecar without a raw file).
+
+#### Get dataset metadata
+
+```bash
+curl http://localhost:8000/api/datasets/sales-2026-q1
+```
+
+Returns the full dataset record including `schema` (column names and types).
+
+#### Update dataset metadata (partial)
+
+```bash
+curl -X PATCH http://localhost:8000/api/datasets/sales-2026-q1 \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Sales Q1 2026 (revised)", "tags": ["sales", "revised"]}'
+```
+
+#### Preview first N rows
+
+```bash
+curl "http://localhost:8000/api/datasets/sales-2026-q1/preview?limit=10"
+```
+
+```json
+{
+  "id": "sales-2026-q1",
+  "format": "csv",
+  "rows": [
+    {"date": "2026-01-01", "region": "North", "revenue": 12000.0, "units": 300}
+  ],
+  "totalRows": 1
+}
+```
+
+#### Column profile
+
+```bash
+curl http://localhost:8000/api/datasets/sales-2026-q1/profile
+```
+
+```json
+{
+  "id": "sales-2026-q1",
+  "columns": [
+    {"name": "revenue", "type": "float", "min": 500.0, "max": 95000.0, "nullCount": 0}
+  ]
+}
+```
+
+#### Delete a dataset (requires `data-engineer` role or higher)
+
+```bash
+curl -X DELETE http://localhost:8000/api/datasets/sales-2026-q1 \
+  -H "X-Role: data-engineer"
+```
+
+Returns `204 No Content`. Returns `403` if the role is insufficient.
+
+---
+
+### Unified Search API
+
+Search across both notes and datasets in one call:
+
+```bash
+curl "http://localhost:8000/api/search?q=quarterly"
+```
+
+```json
+[
+  {
+    "id": "sales-2026-q1",
+    "title": "Sales Q1 2026",
+    "assetType": "dataset",
+    "context": "tag: quarterly"
+  }
+]
+```
+
+Returns `400` if `q` is missing or empty.
+
+---
+
+### Error response shape
+
+All `4xx` errors return a consistent JSON body:
+
+```json
+{"detail": "Human-readable description of the problem."}
+```
+
+| Status | Meaning |
+|---|---|
+| `400` | Bad request — missing field, invalid value, bad file format |
+| `403` | Forbidden — role insufficient for this operation |
+| `404` | Not found — note or dataset id does not exist |
+
+---
+
+## Running Tests
+
+```bash
+cd python
+PYTHONPATH=src python -m pytest              # all tests
+PYTHONPATH=src python -m pytest --tb=short   # compact failure output
+PYTHONPATH=src python -m pytest tests/test_api_notes.py -v   # single file
+```
+
+---
+
+## Starter Code Reference
+
+The `notes0.py`, `notes1.py`, and `noteshell.py` files are the original starter scripts. They demonstrate the basic CLI skeleton and YAML frontmatter concept but are superseded by the `src/notes_app/` package.
+
+```bash
+# Smoke-test the original starter script
+python3 notes0.py help
+python3 smoke_test_notes0.py
+```
+
+## Project Structure
+
+```
+python/
+├── src/
+│   └── notes_app/
+│       ├── api/          # FastAPI app, routers, schemas, dependencies
+│       ├── cli/          # CLI dispatcher and per-command handlers
+│       ├── config/       # Storage path resolution (NOTES_HOME / DATASETS_HOME)
+│       ├── models/       # Frozen dataclasses: Note, Dataset, Asset
+│       ├── repositories/ # Filesystem adapters (FileNoteRepository, etc.)
+│       └── services/     # Business logic: NoteService, DatasetService, BackupService
+└── tests/                # pytest test suite (173 tests)
 - Include datasets in backup/restore manifests.
 - Add role checks for dataset operations (`viewer`, `editor`, `data-engineer`, `admin`).

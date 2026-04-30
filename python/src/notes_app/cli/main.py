@@ -1,14 +1,17 @@
 import sys
 
+from notes_app.cli.commands.backup_command import run_backup
 from notes_app.cli.commands.create_command import run_create
 from notes_app.cli.commands.delete_command import run_delete
 from notes_app.cli.commands.help_command import render_help
 from notes_app.cli.commands.list_command import run_list
 from notes_app.cli.commands.read_command import run_read
+from notes_app.cli.commands.restore_command import run_restore
 from notes_app.cli.commands.search_command import run_search
 from notes_app.cli.commands.update_command import run_update
-from notes_app.config.storage import ensure_notes_dir
+from notes_app.config.storage import ensure_datasets_dir, ensure_notes_dir
 from notes_app.repositories.file_note_repository import FileNoteRepository
+from notes_app.services.backup_service import BackupService
 from notes_app.services.note_service import NoteService
 
 
@@ -16,6 +19,13 @@ def build_service() -> NoteService:
     notes_dir = ensure_notes_dir()
     repository = FileNoteRepository(notes_dir)
     return NoteService(repository)
+
+
+def build_backup_service() -> BackupService:
+    return BackupService(
+        notes_dir=ensure_notes_dir(),
+        datasets_dir=ensure_datasets_dir(),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -92,9 +102,30 @@ def main(argv: list[str] | None = None) -> int:
         print(output)
         return 0
 
+    if command == "backup":
+        output_dir = args[1] if len(args) >= 2 else None
+        output, ok = run_backup(build_backup_service(), output_dir=output_dir)
+        if not ok:
+            print(output, file=sys.stderr)
+            return 1
+        print(output)
+        return 0
+
+    if command == "restore":
+        if len(args) < 2:
+            print("Error: restore requires <backup.zip>.", file=sys.stderr)
+            print("Usage: python -m notes_app.cli.main restore <backup.zip>", file=sys.stderr)
+            return 1
+        output, ok = run_restore(build_backup_service(), backup_path=args[1])
+        if not ok:
+            print(output, file=sys.stderr)
+            return 1
+        print(output)
+        return 0
+
     print(f"Error: Unknown command '{command}'", file=sys.stderr)
     print("Usage: python -m notes_app.cli.main <command> [args]", file=sys.stderr)
-    print("Supported commands: help, create, list, search, read, update, delete", file=sys.stderr)
+    print("Supported commands: help, create, list, search, read, update, delete, backup, restore", file=sys.stderr)
     print("Run 'python -m notes_app.cli.main help' to see full command usage.", file=sys.stderr)
     return 1
 

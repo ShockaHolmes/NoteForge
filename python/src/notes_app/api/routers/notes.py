@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from notes_app.api.dependencies import get_note_service
+from notes_app.api.schemas.error_schemas import ErrorResponse
 from notes_app.api.schemas.note_schemas import (
     NoteCreateRequest,
     NoteResponse,
@@ -29,7 +30,8 @@ def list_notes(service: NoteService = Depends(get_note_service)) -> list[NoteRes
     return [_to_response(n) for n in service.list_notes()]
 
 
-@router.post("", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=NoteResponse, status_code=status.HTTP_201_CREATED,
+             responses={400: {"model": ErrorResponse}})
 def create_note(
     body: NoteCreateRequest,
     service: NoteService = Depends(get_note_service),
@@ -55,7 +57,8 @@ def search_notes(
     return results
 
 
-@router.get("/{note_id}", response_model=NoteResponse)
+@router.get("/{note_id}", response_model=NoteResponse,
+            responses={404: {"model": ErrorResponse}})
 def get_note(
     note_id: str,
     service: NoteService = Depends(get_note_service),
@@ -66,7 +69,8 @@ def get_note(
     return _to_response(note)
 
 
-@router.patch("/{note_id}", response_model=NoteResponse)
+@router.patch("/{note_id}", response_model=NoteResponse,
+              responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 def update_note(
     note_id: str,
     body: NoteUpdateRequest,
@@ -84,7 +88,8 @@ def update_note(
     return _to_response(note)
 
 
-@router.put("/{note_id}", response_model=NoteResponse)
+@router.put("/{note_id}", response_model=NoteResponse,
+            responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 def replace_note(
     note_id: str,
     body: NoteCreateRequest,
@@ -101,7 +106,8 @@ def replace_note(
     return _to_response(note)
 
 
-@router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT,
+               responses={404: {"model": ErrorResponse}})
 def delete_note(
     note_id: str,
     service: NoteService = Depends(get_note_service),

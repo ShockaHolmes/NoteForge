@@ -5,6 +5,7 @@ from notes_app.api.dependencies import (
     require_dataset_delete_role,
     require_dataset_upload_role,
 )
+from notes_app.api.schemas.error_schemas import ErrorResponse
 from notes_app.api.schemas.dataset_schemas import (
     DatasetProfileResponse,
     DatasetMetadataSummaryResponse,
@@ -75,7 +76,8 @@ def list_datasets(
     return [_to_response(d) for d in service.list_datasets()]
 
 
-@router.post("", response_model=DatasetUploadResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DatasetUploadResponse, status_code=status.HTTP_201_CREATED,
+             responses={400: {"model": ErrorResponse}, 403: {"model": ErrorResponse}})
 async def create_dataset(
     title: str = Form(..., min_length=1, max_length=200),
     author: str = Form(default=""),
@@ -102,12 +104,13 @@ async def create_dataset(
         )
     except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
     return _to_upload_response(dataset)
 
 
-@router.get("/{dataset_id}/preview", response_model=DatasetPreviewResponse)
+@router.get("/{dataset_id}/preview", response_model=DatasetPreviewResponse,
+            responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 def preview_dataset(
     dataset_id: str,
     limit: int = Query(5, ge=1, le=1000, description="Number of rows/records to preview"),
@@ -122,7 +125,7 @@ def preview_dataset(
         ) from exc
     except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
 
@@ -143,7 +146,8 @@ def preview_dataset(
     )
 
 
-@router.get("/{dataset_id}/profile", response_model=DatasetProfileResponse)
+@router.get("/{dataset_id}/profile", response_model=DatasetProfileResponse,
+            responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 def profile_dataset(
     dataset_id: str,
     service: DatasetService = Depends(get_dataset_service),
@@ -157,7 +161,7 @@ def profile_dataset(
         ) from exc
     except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
 
@@ -180,7 +184,8 @@ def profile_dataset(
     )
 
 
-@router.get("/{dataset_id}", response_model=DatasetResponse)
+@router.get("/{dataset_id}", response_model=DatasetResponse,
+            responses={404: {"model": ErrorResponse}})
 def get_dataset(
     dataset_id: str,
     service: DatasetService = Depends(get_dataset_service),
@@ -194,7 +199,8 @@ def get_dataset(
     return _to_response(dataset)
 
 
-@router.patch("/{dataset_id}", response_model=DatasetResponse)
+@router.patch("/{dataset_id}", response_model=DatasetResponse,
+              responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 def update_dataset(
     dataset_id: str,
     body: DatasetUpdateRequest,
@@ -216,7 +222,8 @@ def update_dataset(
     return _to_response(dataset)
 
 
-@router.delete("/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT,
+               responses={403: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 def delete_dataset(
     dataset_id: str,
     _role: str = Depends(require_dataset_delete_role),

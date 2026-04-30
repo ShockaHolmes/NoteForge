@@ -9,7 +9,9 @@ def render_help(program_name: str = "python -m notes_app.cli.main") -> str:
         "  create <title> <content>  Create a note\n"
         "  read <id>  Display a note by id or filename\n"
         "  update <id> [--title \"...\"] [--tags \"tag1,tag2\"] [--content \"...\"]  Update a note\n"
-        "  delete <id>  Delete a note by id or filename\n\n"
+        "  delete <id>  Delete a note by id or filename\n"
+        "  backup [output-dir]  Create a zip backup of notes and datasets\n"
+        "  restore <backup.zip>  Restore notes and datasets from a zip backup\n\n"
         "Examples:\n"
         f"  {program_name} create \"My Note\" \"hello world\"\n"
         f"  {program_name} list\n"
@@ -17,4 +19,7 @@ def render_help(program_name: str = "python -m notes_app.cli.main") -> str:
         f"  {program_name} read my-note\n"
         f"  {program_name} update my-note --title \"New Title\"\n"
         f"  {program_name} delete my-note\n"
+        f"  {program_name} backup\n"
+        f"  {program_name} backup /tmp/backups\n"
+        f"  {program_name} restore /tmp/backups/notes-backup-2026-04-30T....zip\n"
     )
