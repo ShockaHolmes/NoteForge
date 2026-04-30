@@ -19,8 +19,10 @@ pip install -r requirements.txt   # fastapi, uvicorn, pyyaml, pytest, etc.
 
 ```bash
 cd python
-PYTHONPATH=src python -m notes_app.cli.main help
+PYTHONPATH=src python -m notes_app.cli.main
 ```
+
+Running with no arguments starts the interactive NoteForge menu.
 
 ### Start the API server
 
@@ -63,9 +65,12 @@ Each note is a Markdown file with a YAML frontmatter block:
 ---
 id: 2026-04-30-my-first-note
 title: My First Note
+author: shocka
 created: 2026-04-30T10:00:00
 modified: 2026-04-30T10:05:00
 tags: [work, ideas]
+status: draft
+priority: 3
 ---
 
 Body text goes here.
@@ -112,20 +117,38 @@ PYTHONPATH=src python -m notes_app.cli.main <command> [args]
 | Command | Description |
 |---|---|
 | `help` | Show help text |
-| `create <title> <content>` | Create a new note |
+| `menu` | Open the interactive NoteForge menu |
+| `create <title> <content> [--tags "t1,t2"] [--author "name"] [--status draft|active|complete] [--priority 1|2|3|4|5]` | Create a new note with metadata |
 | `list` | List all notes |
 | `read <id>` | Display a note by id or filename |
-| `search <query>` | Search title, tags, and body |
-| `update <id> [--title "…"] [--tags "t1,t2"] [--content "…"]` | Update a note |
+| `search <query>` | Search title, tags, author, status, priority, and body |
+| `update <id> [--title "…"] [--tags "t1,t2"] [--author "name"] [--status draft|active|complete] [--priority 1|2|3|4|5] [--content "…"]` | Update note metadata and/or content |
 | `delete <id>` | Delete a note |
 | `backup [output-dir]` | Zip backup of notes + datasets |
 | `restore <backup.zip>` | Restore from a zip backup |
+
+### Interactive Menu (NoteForge)
+
+When launched with no CLI args, NoteForge shows this menu in order:
+
+1. New Note
+2. Update Note
+3. Delete Note
+4. Save Note
+5. Backup
+6. List
+7. Help
+8. Read
+9. Restore
+10. Search
+11. Quit
 
 ### Examples
 
 ```bash
 # Create a note
-PYTHONPATH=src python -m notes_app.cli.main create "Meeting notes" "Discussed Q2 roadmap"
+PYTHONPATH=src python -m notes_app.cli.main create "Meeting notes" "Discussed Q2 roadmap" \
+  --author "shocka" --tags "work,q2" --status draft --priority 1
 
 # List all notes
 PYTHONPATH=src python -m notes_app.cli.main list
@@ -136,9 +159,14 @@ PYTHONPATH=src python -m notes_app.cli.main read 2026-04-30-meeting-notes
 # Search across title, tags, and body
 PYTHONPATH=src python -m notes_app.cli.main search roadmap
 
+# Search by author/status/priority
+PYTHONPATH=src python -m notes_app.cli.main search shocka
+PYTHONPATH=src python -m notes_app.cli.main search complete
+PYTHONPATH=src python -m notes_app.cli.main search high
+
 # Update title and tags
 PYTHONPATH=src python -m notes_app.cli.main update 2026-04-30-meeting-notes \
-  --title "Q2 Meeting Notes" --tags "work,q2"
+  --title "Q2 Meeting Notes" --tags "work,q2" --status complete --priority 2
 
 # Update content only
 PYTHONPATH=src python -m notes_app.cli.main update 2026-04-30-meeting-notes \
@@ -196,9 +224,12 @@ curl http://localhost:8000/api/notes
   {
     "id": "2026-04-30-meeting-notes",
     "title": "Meeting notes",
+    "author": "shocka",
     "created": "2026-04-30T10:00:00",
     "modified": "2026-04-30T10:05:00",
     "tags": ["work"],
+    "status": "incomplete",
+    "priority": 1,
     "content": "Discussed Q2 roadmap"
   }
 ]
@@ -209,7 +240,7 @@ curl http://localhost:8000/api/notes
 ```bash
 curl -X POST http://localhost:8000/api/notes \
   -H "Content-Type: application/json" \
-  -d '{"title": "New idea", "content": "Build something great", "tags": ["ideas"]}'
+  -d '{"title": "New idea", "content": "Build something great", "tags": ["ideas"], "author": "shocka", "status": "incomplete", "priority": 2}'
 ```
 
 Returns `201 Created` with the new note object.
@@ -227,7 +258,7 @@ Returns `404` with `{"detail": "Note '...' not found."}` if the id does not exis
 ```bash
 curl -X PATCH http://localhost:8000/api/notes/2026-04-30-new-idea \
   -H "Content-Type: application/json" \
-  -d '{"title": "Updated idea", "tags": ["ideas", "priority"]}'
+  -d '{"title": "Updated idea", "tags": ["ideas", "priority"], "status": "complete", "priority": 1}'
 ```
 
 Only the fields provided are changed. Omitted fields are left as-is.
@@ -237,7 +268,7 @@ Only the fields provided are changed. Omitted fields are left as-is.
 ```bash
 curl -X PUT http://localhost:8000/api/notes/2026-04-30-new-idea \
   -H "Content-Type: application/json" \
-  -d '{"title": "Replaced", "content": "Completely new content", "tags": []}'
+  -d '{"title": "Replaced", "content": "Completely new content", "tags": [], "author": "shocka", "status": "incomplete", "priority": 3}'
 ```
 
 #### Delete a note
@@ -266,6 +297,8 @@ curl "http://localhost:8000/api/notes/search?q=roadmap"
 ```
 
 Returns `400` if `q` is missing or empty.
+
+Note search matches title, tags, body, author, status (`draft`, `active`, `complete`), and priority.
 
 ---
 

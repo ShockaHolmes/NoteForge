@@ -44,7 +44,11 @@ def test_run_read_shows_metadata_and_content() -> None:
     assert ok is True
     assert "id:       my-note" in output
     assert "title:    My Note" in output
+    assert "author:   (unknown)" in output
+    assert "created:  " in output
     assert "modified: " in output
+    assert "status:   draft" in output
+    assert "priority: 3 (normal)" in output
     assert "tags:     python, demo" in output
     assert "Hello from the body." in output
 

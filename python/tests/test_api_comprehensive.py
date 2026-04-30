@@ -189,7 +189,14 @@ def test_notes_search_endpoint_empty_q_returns_400(notes_client: TestClient) -> 
 def test_create_note_response_shape(notes_client: TestClient) -> None:
     resp = notes_client.post(
         "/api/notes",
-        json={"title": "Shape Test", "content": "some body", "tags": ["t1", "t2"]},
+        json={
+            "title": "Shape Test",
+            "content": "some body",
+            "tags": ["t1", "t2"],
+            "author": "shocka",
+            "status": "draft",
+            "priority": 2,
+        },
     )
     assert resp.status_code == 201
     data = resp.json()
@@ -197,9 +204,15 @@ def test_create_note_response_shape(notes_client: TestClient) -> None:
     assert "title" in data
     assert "created" in data
     assert "modified" in data
+    assert "author" in data
     assert "tags" in data
+    assert "status" in data
+    assert "priority" in data
     assert "content" in data
     assert data["title"] == "Shape Test"
+    assert data["author"] == "shocka"
+    assert data["status"] == "draft"
+    assert data["priority"] == 2
     assert data["content"] == "some body"
     assert sorted(data["tags"]) == ["t1", "t2"]
 

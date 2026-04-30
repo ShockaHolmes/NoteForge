@@ -41,7 +41,11 @@ def test_run_list_renders_notes1_style_output() -> None:
     assert "Notes:" in output
     assert "sample.md" in output
     assert "Title: Sample" in output
+    assert "Author: (unknown)" in output
+    assert "Created: " in output
     assert "Modified: " in output
+    assert "Status: draft" in output
+    assert "Priority: 3 (normal)" in output
     assert "Tags: tag1, tag2" in output
     assert "1 note(s) found." in output
 

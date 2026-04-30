@@ -26,23 +26,34 @@ class InMemoryNoteRepository(NoteRepository):
         return len(self._notes) != before
 
 
-def _make_note(note_id: str, title: str, tags: tuple[str, ...], content: str) -> Note:
+def _make_note(
+    note_id: str,
+    title: str,
+    tags: tuple[str, ...],
+    content: str,
+    author: str = "",
+    status: str = "draft",
+    priority: int = 3,
+) -> Note:
     now = datetime(2026, 1, 1, tzinfo=timezone.utc)
     return Note(
         id=note_id,
         title=title,
         created=now,
         modified=now,
+        author=author,
         tags=tags,
+        status=status,
+        priority=priority,
         content=content,
     )
 
 
 def _service() -> NoteService:
     notes = [
-        _make_note("t1", "Python Release Notes", ("dev",), "General updates."),
-        _make_note("t2", "Meeting Log", ("school", "research"), "Covered deadlines."),
-        _make_note("t3", "Journal", ("personal",), "Learning rust and python patterns daily."),
+        _make_note("t1", "Python Release Notes", ("dev",), "General updates.", author="alex"),
+        _make_note("t2", "Meeting Log", ("school", "research"), "Covered deadlines.", status="complete", priority=1),
+        _make_note("t3", "Journal", ("personal",), "Learning rust and python patterns daily.", author="sam", priority=2),
     ]
     return NoteService(InMemoryNoteRepository(notes))
 
@@ -76,3 +87,21 @@ def test_search_no_results_message() -> None:
     output = run_search(_service(), query="nonexistent-term")
 
     assert output == "No notes matched 'nonexistent-term'."
+
+
+def test_search_matches_author() -> None:
+    output = run_search(_service(), query="alex")
+    assert "id: t1" in output
+    assert "context: author: alex" in output
+
+
+def test_search_matches_status() -> None:
+    output = run_search(_service(), query="complete")
+    assert "id: t2" in output
+    assert "context: status: complete" in output
+
+
+def test_search_matches_priority_alias() -> None:
+    output = run_search(_service(), query="high")
+    assert "id: t2" in output
+    assert "context: priority: 1" in output

@@ -21,6 +21,8 @@ def _note_search_context(note, term: str) -> str | None:
     metadata_values = [
         note.id,
         note.author,
+        note.status,
+        str(note.priority),
         note.created.isoformat(),
         note.modified.isoformat(),
     ]

@@ -18,9 +18,12 @@ def _to_response(note) -> NoteResponse:
     return NoteResponse(
         id=note.id,
         title=note.title,
+        author=note.author,
         created=note.created,
         modified=note.modified,
         tags=list(note.tags),
+        status=note.status,
+        priority=note.priority,
         content=note.content,
     )
 
@@ -40,6 +43,9 @@ def create_note(
         title=body.title,
         content=body.content,
         tags=tuple(body.tags),
+        author=body.author,
+        status=body.status,
+        priority=body.priority,
     )
     return _to_response(note)
 
@@ -81,6 +87,9 @@ def update_note(
         note_id=note_id,
         title=body.title,
         tags=tags,
+        author=body.author,
+        status=body.status,
+        priority=body.priority,
         content=body.content,
     )
     if note is None:
@@ -99,6 +108,9 @@ def replace_note(
         note_id=note_id,
         title=body.title,
         tags=tuple(body.tags),
+        author=body.author,
+        status=body.status,
+        priority=body.priority,
         content=body.content,
     )
     if note is None:

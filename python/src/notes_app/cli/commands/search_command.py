@@ -38,6 +38,20 @@ def _matching_context(note: Note, term: str) -> str | None:
         tags = ", ".join(note.tags) if note.tags else "(none)"
         return f"tags: {tags}"
 
+    if lowered_term in (note.author or "").lower():
+        return f"author: {note.author}"
+
+    if lowered_term in note.status.lower():
+        return f"status: {note.status}"
+
+    priority_terms = {
+        1: ("1", "high", "priority 1"),
+        2: ("2", "medium", "priority 2"),
+        3: ("3", "normal", "priority 3", "low"),
+    }
+    if any(lowered_term == token for token in priority_terms.get(note.priority, ())):
+        return f"priority: {note.priority}"
+
     body_context = _body_excerpt(note.content, term)
     if body_context is not None:
         return body_context

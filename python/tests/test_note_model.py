@@ -26,6 +26,8 @@ def test_note_to_dict_includes_shared_fields() -> None:
         "created": ISO_CREATED,
         "modified": ISO_MODIFIED,
         "tags": ["python", "phase-1"],
+        "status": "draft",
+        "priority": 3,
         "content": "hello world",
     }
 
@@ -38,6 +40,8 @@ def test_note_from_dict_round_trips_shared_fields() -> None:
             "created": ISO_CREATED,
             "modified": ISO_MODIFIED,
             "tags": ["python", "phase-1"],
+            "status": "complete",
+            "priority": 1,
             "content": "hello world",
         }
     )
@@ -45,6 +49,8 @@ def test_note_from_dict_round_trips_shared_fields() -> None:
     assert note.id == "note-123"
     assert note.title == "Shared Note"
     assert note.tags == ("python", "phase-1")
+    assert note.status == "complete"
+    assert note.priority == 1
     assert note.content == "hello world"
     assert note.created.isoformat() == "2026-04-28T12:00:00+00:00"
     assert note.modified.isoformat() == "2026-04-28T13:30:00+00:00"
@@ -58,6 +64,8 @@ def test_note_metadata_conversion_supports_yaml_boundary() -> None:
         "created": ISO_CREATED,
         "modified": ISO_MODIFIED,
         "tags": ["yaml", "cli"],
+        "status": "draft",
+        "priority": 3,
     }
 
     note = Note.from_metadata_dict(metadata, content="body text")

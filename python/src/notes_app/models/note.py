@@ -14,6 +14,8 @@ class Note(Asset):
     modified: datetime
     author: str = ""
     tags: tuple[str, ...] = ()
+    status: str = "draft"
+    priority: int = 3
     content: str = ""
 
     @property
@@ -32,6 +34,8 @@ class Note(Asset):
         content: str,
         tags: tuple[str, ...] = (),
         author: str = "",
+        status: str = "draft",
+        priority: int = 3,
     ) -> "Note":
         now = datetime.now(timezone.utc)
         return Note(
@@ -41,6 +45,8 @@ class Note(Asset):
             modified=now,
             author=author,
             tags=tags,
+            status=Note._normalize_status(status),
+            priority=Note._normalize_priority(priority),
             content=content,
         )
 
@@ -52,6 +58,8 @@ class Note(Asset):
             "created": self._to_iso(self.created),
             "modified": self._to_iso(self.modified),
             "tags": list(self.tags),
+            "status": self.status,
+            "priority": self.priority,
             "content": self.content,
         }
 
@@ -64,6 +72,8 @@ class Note(Asset):
         author = str(data.get("author") or "")
         tags_value = data.get("tags", [])
         tags = cls._normalize_tags(tags_value)
+        status = cls._normalize_status(data.get("status"))
+        priority = cls._normalize_priority(data.get("priority"))
         content = str(data.get("content") or "")
         return cls(
             id=note_id,
@@ -72,6 +82,8 @@ class Note(Asset):
             modified=modified,
             author=author,
             tags=tags,
+            status=status,
+            priority=priority,
             content=content,
         )
 
@@ -83,6 +95,8 @@ class Note(Asset):
             "created": self._to_iso(self.created),
             "modified": self._to_iso(self.modified),
             "tags": list(self.tags),
+            "status": self.status,
+            "priority": self.priority,
         }
 
     @classmethod
@@ -105,6 +119,25 @@ class Note(Asset):
         if isinstance(value, (list, tuple)):
             return tuple(str(item).strip() for item in value if str(item).strip())
         return ()
+
+    @staticmethod
+    def _normalize_status(value: object) -> str:
+        status = str(value or "draft").strip().lower()
+        if status in {"complete", "completed", "done"}:
+            return "complete"
+        if status in {"active", "in-progress", "inprogress", "updating"}:
+            return "active"
+        if status in {"draft", "incomplete", "new"}:
+            return "draft"
+        return "draft"
+
+    @staticmethod
+    def _normalize_priority(value: object) -> int:
+        try:
+            priority = int(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return 3
+        return priority if priority in {1, 2, 3, 4, 5} else 3
 
     @staticmethod
     def _to_iso(value: datetime) -> str:

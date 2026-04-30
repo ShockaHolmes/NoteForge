@@ -1,11 +1,12 @@
 ---
-title: Personal Project Ideas
-created: 2025-04-10T18:22:15Z
-modified: 2025-05-19T20:45:33Z
-tags: [projects, ideas, planning]
+id: sample-note-2
+title: Future Project Ideas & Plans
 author: Student001
-status: draft
-priority: 4
+created: 2025-04-10T18:22:15Z
+modified: 2026-04-30T16:09:45.237594Z
+tags: [projects, ideas, planning]
+status: active
+priority: 5
 ---
 
 # Future Project Ideas

@@ -16,6 +16,8 @@ def render_frontmatter(note: Note) -> str:
         f"created: {metadata['created']}\n"
         f"modified: {metadata['modified']}\n"
         f"tags: [{tags_str}]\n"
+        f"status: {metadata['status']}\n"
+        f"priority: {metadata['priority']}\n"
         "---\n\n"
     )
 
@@ -47,6 +49,8 @@ def parse_note_text(slug: str, text: str) -> Note:
     raw_tags = metadata.get("tags", "")
     metadata["tags"] = _parse_tags(raw_tags if isinstance(raw_tags, str) else "")
     metadata.setdefault("author", "")
+    metadata.setdefault("status", "draft")
+    metadata.setdefault("priority", 3)
 
     return Note.from_metadata_dict(metadata, content=body)
 

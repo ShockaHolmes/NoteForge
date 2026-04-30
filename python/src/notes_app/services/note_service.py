@@ -13,9 +13,25 @@ class NoteService(AssetService[Note]):
     def __init__(self, repository: NoteRepository):
         self._repository = repository
 
-    def create_note(self, title: str, content: str, tags: tuple[str, ...] = ()) -> Note:
+    def create_note(
+        self,
+        title: str,
+        content: str,
+        tags: tuple[str, ...] = (),
+        author: str = "",
+        status: str = "draft",
+        priority: int = 3,
+    ) -> Note:
         slug = self._slugify(title)
-        note = Note.create(note_id=slug, title=title, content=content, tags=tags)
+        note = Note.create(
+            note_id=slug,
+            title=title,
+            content=content,
+            tags=tags,
+            author=author,
+            status=status,
+            priority=priority,
+        )
         self._repository.save(note)
         return note
 
@@ -31,6 +47,9 @@ class NoteService(AssetService[Note]):
         note_id: str,
         title: str | None = None,
         tags: tuple[str, ...] | None = None,
+        author: str | None = None,
+        status: str | None = None,
+        priority: int | None = None,
         content: str | None = None,
     ) -> Note | None:
         slug = note_id.removesuffix(".md")
@@ -41,6 +60,9 @@ class NoteService(AssetService[Note]):
             existing,
             title=title if title is not None else existing.title,
             tags=tags if tags is not None else existing.tags,
+            author=author if author is not None else existing.author,
+            status=Note._normalize_status(status) if status is not None else "active",
+            priority=Note._normalize_priority(priority) if priority is not None else existing.priority,
             content=content if content is not None else existing.content,
             modified=datetime.now(timezone.utc),
         )
