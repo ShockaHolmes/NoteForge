@@ -2,10 +2,11 @@ from notes_app.models.note import Note
 from notes_app.services.note_service import NoteService
 
 
-def run_search(service: NoteService, query: str) -> str:
+def get_search_matches(service: NoteService, query: str) -> tuple[str, list[tuple[Note, str]]]:
+    """Return (output_string, matches). matches is empty when nothing is found."""
     term = query.strip()
     if not term:
-        return "Error: search query cannot be empty."
+        return "Error: search query cannot be empty.", []
 
     matches: list[tuple[Note, str]] = []
     for note in service.list_notes():
@@ -14,18 +15,23 @@ def run_search(service: NoteService, query: str) -> str:
             matches.append((note, context))
 
     if not matches:
-        return f"No notes matched '{term}'."
+        return f"No notes matched '{term}'.", []
 
     lines: list[str] = [f"Search results for '{term}':", "=" * 60]
-    for note, context in matches:
+    for i, (note, context) in enumerate(matches, 1):
         lines.append("")
-        lines.append(f"id: {note.id}")
-        lines.append(f"title: {note.title}")
-        lines.append(f"context: {context}")
+        lines.append(f"[{i}]  id: {note.id}")
+        lines.append(f"     title: {note.title}")
+        lines.append(f"     context: {context}")
 
     lines.append("")
     lines.append(f"{len(matches)} match(es) found.")
-    return "\n".join(lines)
+    return "\n".join(lines), matches
+
+
+def run_search(service: NoteService, query: str) -> str:
+    output, _ = get_search_matches(service, query)
+    return output
 
 
 def _matching_context(note: Note, term: str) -> str | None:

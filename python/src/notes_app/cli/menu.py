@@ -15,7 +15,7 @@ from notes_app.cli.commands.help_command import render_help
 from notes_app.cli.commands.list_command import run_list
 from notes_app.cli.commands.read_command import run_read
 from notes_app.cli.commands.restore_command import run_restore
-from notes_app.cli.commands.search_command import run_search
+from notes_app.cli.commands.search_command import get_search_matches, run_search
 from notes_app.cli.commands.update_command import run_update
 from notes_app.config.storage import ensure_datasets_dir, ensure_notes_dir
 from notes_app.services.backup_service import BackupService
@@ -394,8 +394,29 @@ def _action_search(service: NoteService) -> None:
         input("\n  Press Enter to continue…")
         return
 
+    output, matches = get_search_matches(service, query)
     print()
-    print(run_search(service, query=query))
+    print(output)
+
+    if not matches:
+        input("\n  Press Enter to continue…")
+        return
+
+    print()
+    raw = _prompt("  Select a note by number to read it (or press Enter to go back): ")
+    if not raw:
+        return
+    try:
+        idx = int(raw) - 1
+        if 0 <= idx < len(matches):
+            note_id = matches[idx][0].id
+            msg, ok = run_read(service, note_id=note_id)
+            prefix = "✓" if ok else "✗"
+            print(f"\n  {prefix} {msg}")
+        else:
+            print("\n  Invalid selection.")
+    except ValueError:
+        print("\n  Invalid selection.")
     input("\n  Press Enter to continue…")
 
 
