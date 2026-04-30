@@ -29,23 +29,25 @@ _COLOR_MAGENTA = "\033[95m"
 _COLOR_BOLD    = "\033[1m"
 _COLOR_RESET   = "\033[0m"
 
-_BOX_W      = 58
+_BOX_W      = 64
 _BOX_TOP    = "╔" + "═" * _BOX_W + "╗"
 _BOX_BOTTOM = "╚" + "═" * _BOX_W + "╝"
 _BOX_EMPTY  = "║" + " " * _BOX_W + "║"
 
-_BANNER_ART = [
-    "   _   _       _       _____                              ",
-    "  | \\ | | ___ | |_ ___| ____|__  _ __ __ _  ___          ",
-    "  |  \\| |/ _ \\| __/ _ \\  _| / _|| '__/ _` |/ _ \\       ",
-    "  | |\\  | (_) | ||  __/ |__| (__ | | | (_| |  __/        ",
-    "  |_| \\_|\\___/ \\__\\___|_____\\___||_|  \\__, |\\___|       ",
-    "                                        |___/             ",
+# 6-row Unicode block NF monogram — each row is exactly 22 chars
+_MONOGRAM = [
+    "██╗  ██╗  ███████╗",
+    "███╗ ██║  ██╔════╝",
+    "██╔██╗██║  █████╗  ",
+    "██║╚████║  ██╔══╝  ",
+    "██║  ╚███║  ██║     ",
+    "╚═╝   ╚══╝  ╚═╝     ",
 ]
 
-_TAGLINE = "~  Your Smart Note Manager  ~"
+_TITLE   = "·  N O T E F O R G E  ·"
+_TAGLINE = "Your Smart Note Manager"
 
-_DIVIDER = "─" * 60
+_DIVIDER = "─" * 66
 
 _MENU_ITEMS = [
     ("1", "New Note"),
@@ -70,12 +72,20 @@ def _clear() -> None:
 def _print_menu() -> None:
     _clear()
     g, c, m, b, r = _COLOR_GOLD, _COLOR_CYAN, _COLOR_MAGENTA, _COLOR_BOLD, _COLOR_RESET
+    thin = "─" * _BOX_W
     print(f"{g}{b}{_BOX_TOP}{r}")
     print(f"{g}{b}{_BOX_EMPTY}{r}")
-    for line in _BANNER_ART:
-        print(f"{g}{b}║{r}{c}{line.ljust(_BOX_W)}{r}{g}{b}║{r}")
-    print(f"{g}{b}{_BOX_EMPTY}{r}")
-    print(f"{g}{b}║{r}{m}{b}{_TAGLINE.center(_BOX_W)}{r}{g}{b}║{r}")
+    for line in _MONOGRAM:
+        inner = line.strip().center(_BOX_W)
+        # Render block chars in cyan, the rest of the line in gold
+        colored = "".join(
+            f"{b}{c}{ch}{r}" if ch not in (" ", "═", "╝", "╗") else ch
+            for ch in inner
+        )
+        print(f"{g}{b}║{r}{colored}{g}{b}║{r}")
+    print(f"{g}{b}║{r}{g}{'─' * _BOX_W}{r}{g}{b}║{r}")
+    print(f"{g}{b}║{r}{g}{b}{_TITLE.center(_BOX_W)}{r}{g}{b}║{r}")
+    print(f"{g}{b}║{r}{m}{_TAGLINE.center(_BOX_W)}{r}{g}{b}║{r}")
     print(f"{g}{b}{_BOX_EMPTY}{r}")
     print(f"{g}{b}{_BOX_BOTTOM}{r}")
     print()
