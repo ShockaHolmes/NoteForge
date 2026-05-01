@@ -7,7 +7,7 @@ def run_list(service: NoteService) -> str:
         return "No notes found."
 
     lines: list[str] = ["Notes:", "=" * 60]
-    for note in notes:
+    for index, note in enumerate(notes, start=1):
         priority_label = {
             1: "high",
             2: "medium high",
@@ -16,7 +16,7 @@ def run_list(service: NoteService) -> str:
             5: "low",
         }.get(note.priority, "normal")
         lines.append("")
-        lines.append(f"{note.slug}.md")
+        lines.append(f"[{index}] {note.slug}.md")
         lines.append(f"  Title: {note.title}")
         lines.append(f"  Author: {note.author or '(unknown)'}")
         lines.append(f"  Created: {note.created.isoformat()}")

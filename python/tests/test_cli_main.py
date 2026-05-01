@@ -10,7 +10,7 @@ def test_help_lists_available_note_commands(capsys) -> None:
     assert "create <title> <content>" in captured.out
     assert "list" in captured.out
     assert "search <query>" in captured.out
-    assert "read <id>" in captured.out
+    assert "read <id|number>" in captured.out
     assert "update <id>" in captured.out
     assert "delete <id>" in captured.out
 

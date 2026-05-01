@@ -87,3 +87,26 @@ def test_run_read_note_with_no_tags_shows_none() -> None:
 
     assert ok is True
     assert "tags:     (none)" in output
+
+
+def test_run_read_accepts_numeric_list_selection() -> None:
+    notes = [
+        _make_note("first-note"),
+        _make_note("second-note"),
+    ]
+    service = NoteService(InMemoryNoteRepository(notes))
+
+    output, ok = run_read(service, note_id="2")
+
+    assert ok is True
+    assert "id:       second-note" in output
+
+
+def test_run_read_out_of_range_numeric_selection_returns_error() -> None:
+    service = NoteService(InMemoryNoteRepository([_make_note("only-note")]))
+
+    output, ok = run_read(service, note_id="2")
+
+    assert ok is False
+    assert "2" in output
+    assert "not found" in output.lower()

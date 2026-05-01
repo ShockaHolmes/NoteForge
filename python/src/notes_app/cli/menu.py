@@ -339,6 +339,13 @@ def _action_list_notes(service: NoteService) -> None:
     print(_DIVIDER)
     print()
     print(run_list(service))
+    raw = _prompt("\n  Select a note number to read it (or press Enter to return): ")
+    if not raw:
+        return
+
+    msg, ok = run_read(service, note_id=raw)
+    prefix = "✓" if ok else "✗"
+    print(f"\n  {prefix} {msg}")
     input("\n  Press Enter to continue…")
 
 

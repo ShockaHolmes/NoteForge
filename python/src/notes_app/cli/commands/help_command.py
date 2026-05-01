@@ -7,7 +7,7 @@ def render_help(program_name: str = "python -m notes_app.cli.main") -> str:
         "  list  List notes with metadata\n"
         "  search <query>  Search title, tags, author, status, priority, and note body\n"
         "  create <title> <content> [--tags \"t1,t2\"] [--author \"name\"] [--status draft|active|complete] [--priority 1|2|3|4|5]  Create a note\n"
-        "  read <id>  Display a note by id or filename\n"
+        "  read <id|number>  Display a note by id, filename, or list number\n"
         "  update <id> [--title \"...\"] [--tags \"tag1,tag2\"] [--author \"...\"] [--status draft|active|complete] [--priority 1|2|3|4|5 (1=High,3=Normal,5=Low)] [--content \"...\"]  Update a note\n"
         "  delete <id>  Delete a note by id or filename\n"
         "  backup [output-dir]  Create a zip backup of notes and datasets\n"

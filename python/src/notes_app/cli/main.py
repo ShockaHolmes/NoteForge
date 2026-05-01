@@ -147,8 +147,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if command == "read":
         if len(args) < 2:
-            print("Error: read requires <id>.", file=sys.stderr)
-            print("Usage: python -m notes_app.cli.main read <id>", file=sys.stderr)
+            print("Error: read requires <id|number>.", file=sys.stderr)
+            print("Usage: python -m notes_app.cli.main read <id|number>", file=sys.stderr)
             return 1
         output, ok = run_read(service, note_id=args[1])
         if not ok:

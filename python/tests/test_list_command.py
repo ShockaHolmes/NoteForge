@@ -39,7 +39,7 @@ def test_run_list_renders_notes1_style_output() -> None:
     output = run_list(service)
 
     assert "Notes:" in output
-    assert "sample.md" in output
+    assert "[1] sample.md" in output
     assert "Title: Sample" in output
     assert "Author: (unknown)" in output
     assert "Created: " in output

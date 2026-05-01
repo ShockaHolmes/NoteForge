@@ -1,9 +1,25 @@
 from notes_app.services.note_service import NoteService
 
 
+def _resolve_note_id(service: NoteService, note_id: str) -> str:
+    """Resolve numeric list selections (1-based) to a note id."""
+    if not note_id.isdigit():
+        return note_id
+
+    index = int(note_id)
+    if index < 1:
+        return note_id
+
+    notes = service.list_notes()
+    if index > len(notes):
+        return note_id
+    return notes[index - 1].id
+
+
 def run_read(service: NoteService, note_id: str) -> tuple[str, bool]:
     """Return (output, ok). ok is False when the note is not found."""
-    note = service.get_note(note_id)
+    resolved_note_id = _resolve_note_id(service, note_id)
+    note = service.get_note(resolved_note_id)
     if note is None:
         slug = note_id.removesuffix(".md")
         return f"Error: Note '{slug}' not found.", False
