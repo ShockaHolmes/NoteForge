@@ -24,6 +24,22 @@ PYTHONPATH=src python -m notes_app.cli.main
 
 Running with no arguments starts the interactive NoteForge menu.
 
+### Run from repo root (single command)
+
+From the repository root, use the launcher script:
+
+```bash
+./notes
+```
+
+Pass any CLI command through the launcher:
+
+```bash
+./notes help
+./notes list
+./notes create "Title" "Content"
+```
+
 ### Start the API server
 
 ```bash
