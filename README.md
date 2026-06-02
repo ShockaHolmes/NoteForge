@@ -150,6 +150,46 @@ There a few sample note files in [test-notes/](./test-notes)
 
 ## Phase 1: CLI Implementation
 
+### Running the CLI
+
+All CLI commands are run from the `python/` directory using the package-based entry point.
+The notes directory (`~/.notes/notes/`) is created automatically on first run.
+
+```bash
+# Navigate to the Python implementation directory
+cd python
+
+# Display help
+PYTHONPATH=src python3 -m notes_app.cli.main help
+
+# Create a new note
+PYTHONPATH=src python3 -m notes_app.cli.main create "My First Note" "This is the note content."
+
+# List all notes
+PYTHONPATH=src python3 -m notes_app.cli.main list
+
+# Read a specific note (replace <note-id> with the ID shown in the list output)
+PYTHONPATH=src python3 -m notes_app.cli.main read <note-id>
+
+# Update a note's title, tags, or content
+PYTHONPATH=src python3 -m notes_app.cli.main update <note-id> --title "Updated Title"
+PYTHONPATH=src python3 -m notes_app.cli.main update <note-id> --tags "work,important"
+PYTHONPATH=src python3 -m notes_app.cli.main update <note-id> --content "Revised content here."
+
+# Delete a note
+PYTHONPATH=src python3 -m notes_app.cli.main delete <note-id>
+
+# Search notes by keyword (searches title, tags, and body)
+PYTHONPATH=src python3 -m notes_app.cli.main search "keyword"
+```
+
+**PROTIP:** Seed your notes directory with the sample notes to have something to work with right away:
+
+```bash
+mkdir -p ~/.notes/notes
+cp test-notes/*.md ~/.notes/notes/
+```
+
 ### Command Reference
 
 These commands can all be run from "anywhere" in your file system, and they are manipulating
@@ -170,15 +210,6 @@ notes search "query"             # Search notes for text (title, tags, content)
 notes stats                      # Display statistics about your notes
 ```
 
-And PROTIP: You might want to
-
-```
-mkdir -p ~/.notes/notes
-cp test-notes/*.md ~/.notes/notes/
-```
-
-So you have some notes to play with right away, and to test your search and listing features.
-
 ### Technical Requirements
 
 - Java 11+ or Python 3.11+
@@ -187,31 +218,121 @@ So you have some notes to play with right away, and to test your search and list
 - Text editor integration (nano?)
 - Extra Credit: github integration for the notes storage
 - Extra Credit: note encryption (and key management)
-  
+
 ## Phase 2: REST Server Implementation
 
 Maybe instead of Phase 2? Maybe this week, maybe in the future.
 
 What is this stuff anyway? Well, Ask your friendly, globe-girdling AI.
 
+### Starting the API Server
+
+```bash
+# Navigate to the Python implementation directory
+cd python
+
+# Install dependencies (FastAPI + Uvicorn)
+pip install fastapi uvicorn pyyaml
+
+# Start the API server (auto-reloads on code changes)
+PYTHONPATH=src uvicorn notes_app.api.app:app --reload --port 8000
+```
+
+Once running, visit:
+- **Interactive docs (Swagger UI):** http://localhost:8000/docs
+- **Alternative docs (ReDoc):** http://localhost:8000/redoc
+- **Health check:** http://localhost:8000/health
+
+### Managing Notes via the API
+
+```bash
+# List all notes
+curl http://localhost:8000/api/notes
+
+# Create a note
+curl -X POST http://localhost:8000/api/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title": "My API Note", "content": "Hello from the API.", "tags": ["example", "api"]}'
+
+# Read a specific note (replace <note-id> with the ID returned from create/list)
+curl http://localhost:8000/api/notes/<note-id>
+
+# Update a note (PATCH supports partial updates)
+curl -X PATCH http://localhost:8000/api/notes/<note-id> \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated Title", "tags": ["updated"]}'
+
+# Replace a note fully (PUT)
+curl -X PUT http://localhost:8000/api/notes/<note-id> \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Replaced Note", "content": "Completely new content.", "tags": []}'
+
+# Delete a note
+curl -X DELETE http://localhost:8000/api/notes/<note-id>
+
+# Search notes by keyword
+curl "http://localhost:8000/api/search?q=example"
+```
+
+### Uploading and Managing Datasets via the API
+
+Datasets (CSV or JSON files) are uploaded via multipart form-data and stored in `~/.notes/datasets/`.
+Each upload automatically creates a sidecar YAML metadata file alongside the data file.
+
+```bash
+# Upload a CSV dataset
+curl -X POST http://localhost:8000/api/datasets \
+  -F "title=Sales Q1 2026" \
+  -F "author=Zip Coder" \
+  -F "tags=sales,finance,quarterly" \
+  -F "file=@sales-2026-q1.csv"
+
+# Upload a JSON dataset
+curl -X POST http://localhost:8000/api/datasets \
+  -F "title=Customer Events" \
+  -F "author=Zip Coder" \
+  -F "tags=events,customers" \
+  -F "file=@customer-events.json"
+
+# List all datasets
+curl http://localhost:8000/api/datasets
+
+# Get dataset metadata
+curl http://localhost:8000/api/datasets/<dataset-id>
+
+# Preview the first N rows of a dataset
+curl "http://localhost:8000/api/datasets/<dataset-id>/preview?limit=10"
+
+# Profile a dataset (column stats, inferred types, null counts)
+curl http://localhost:8000/api/datasets/<dataset-id>/profile
+
+# Update dataset metadata (title, tags, status, priority)
+curl -X PATCH http://localhost:8000/api/datasets/<dataset-id> \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Sales Q1 2026 (Revised)", "tags": ["sales", "finance"]}'
+
+# Delete a dataset and its sidecar metadata
+curl -X DELETE http://localhost:8000/api/datasets/<dataset-id>
+```
+
 ### API Endpoints
 
 ```
-GET    /api/notes                # List all notes
-POST   /api/notes                # Create a new note
-GET    /api/notes/:id            # Retrieve a specific note
-PUT    /api/notes/:id            # Update a specific note
-DELETE /api/notes/:id            # Delete a specific note
-GET    /api/tags                 # List all tags
-GET    /api/notes/tag/:tagid     # List all notes with tag tagid
-GET    /api/search?q=query       # Search notes and datasets
+GET    /api/notes                    # List all notes
+POST   /api/notes                    # Create a new note
+GET    /api/notes/:id                # Retrieve a specific note
+PUT    /api/notes/:id                # Replace a specific note
+PATCH  /api/notes/:id                # Partially update a specific note
+DELETE /api/notes/:id                # Delete a specific note
+GET    /api/search?q=query           # Search notes and datasets
 
-GET    /api/datasets             # List datasets
-POST   /api/datasets             # Upload dataset (CSV/JSON)
-GET    /api/datasets/:id         # Retrieve dataset metadata
-DELETE /api/datasets/:id         # Delete dataset and sidecar metadata
-GET    /api/datasets/:id/preview # Preview first N rows
-GET    /api/datasets/:id/profile # Column stats, inferred types, null counts
+GET    /api/datasets                 # List datasets
+POST   /api/datasets                 # Upload dataset (CSV/JSON)
+GET    /api/datasets/:id             # Retrieve dataset metadata
+PATCH  /api/datasets/:id             # Update dataset metadata
+DELETE /api/datasets/:id             # Delete dataset and sidecar metadata
+GET    /api/datasets/:id/preview     # Preview first N rows
+GET    /api/datasets/:id/profile     # Column stats, inferred types, null counts
 ```
 
 ### Phase 2 Integration Notes
@@ -271,23 +392,27 @@ Students will gain experience with:
 
 ### Prerequisites
 
-- [List required software/libraries]
+- Python 3.11+ (for the Python implementation)
+- Java 11+ (for the Java implementation)
+- `pip` for installing Python dependencies
 - Basic understanding of Java or Python
-- Knowledge of [relevant concepts]
 
 ### Installation
 
 ```bash
 # Clone the repository
 # CHOOSE your Project's Name NOW.... _don't use future-proof_. **See Below for Suggested Names**
-git clone https://github.com/yourusername/future-proof.git `yournotesnamehere`
+git clone https://github.com/yourusername/future-proof.git yournotesnamehere
 
-# Navigate to the project directory or whatever you named it in the clone.
-cd `yournotesnamehere`
+# Navigate to the project directory
+cd yournotesnamehere
 
-# Install dependencies
-(if you need them)
+# (Python) Install dependencies
+pip install fastapi uvicorn pyyaml
 
+# Seed your notes directory with the sample notes so you have something to work with
+mkdir -p ~/.notes/notes
+cp test-notes/*.md ~/.notes/notes/
 ```
 
 ## Lab notes
