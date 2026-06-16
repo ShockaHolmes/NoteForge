@@ -4,6 +4,8 @@ import csv
 import io
 import json
 import logging
+import os
+import tempfile
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -44,7 +46,7 @@ class FileDatasetRepository(DatasetRepository):
         """Write (or overwrite) the sidecar for *item*."""
         normalized = replace(item, path=DatasetMetadata._normalize_relative_path(item.path))
         sidecar_path = self._sidecar_path_for(normalized)
-        sidecar_path.write_text(render_sidecar(normalized), encoding="utf-8")
+        self._write_text_atomic(sidecar_path, render_sidecar(normalized))
 
     def list_all(self) -> Iterable[Dataset]:
         results: list[Dataset] = []
@@ -130,7 +132,7 @@ class FileDatasetRepository(DatasetRepository):
 
         # Write sidecar next to the data file
         sidecar_path = self._datasets_dir / f"{relative_name}.dataset.yml"
-        sidecar_path.write_text(render_sidecar(updated), encoding="utf-8")
+        self._write_text_atomic(sidecar_path, render_sidecar(updated))
 
         return updated
 
@@ -164,7 +166,7 @@ class FileDatasetRepository(DatasetRepository):
             raw_data = yaml.safe_load(sidecar_path.read_text(encoding="utf-8")) or {}
             data = raw_data if isinstance(raw_data, dict) else {}
             data["profile"] = profile
-            sidecar_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+            self._write_text_atomic(sidecar_path, yaml.safe_dump(data, sort_keys=False))
         except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
             _LOG.warning("Unable to save profile for sidecar %s: %s", sidecar_path.name, exc)
 
@@ -192,6 +194,27 @@ class FileDatasetRepository(DatasetRepository):
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _write_text_atomic(path: Path, text: str, encoding: str = "utf-8") -> None:
+        """Write *text* to *path* atomically using a temp file and ``os.replace``.
+
+        Ensures that readers never observe a partially-written sidecar file,
+        which would otherwise cause spurious 404 errors when a background
+        profiling thread rewrites the sidecar concurrently with a read request.
+        """
+        dir_path = path.parent
+        fd, tmp_name = tempfile.mkstemp(dir=dir_path, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding=encoding) as fh:
+                fh.write(text)
+            os.replace(tmp_name, path)
+        except Exception:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
 
     def _sidecar_path_for(self, dataset: Dataset) -> Path:
         """Return the sidecar path that corresponds to *dataset*."""

@@ -20,6 +20,8 @@ class DatasetMetadata:
     created: datetime
     modified: datetime
     tags: tuple[str, ...] = ()
+    status: str = ""
+    priority: int = 0
     format: str = ""
     path: str = ""
     size_bytes: int = 0
@@ -37,6 +39,8 @@ class DatasetMetadata:
             created=dataset.created,
             modified=dataset.modified,
             tags=dataset.tags,
+            status=dataset.status,
+            priority=dataset.priority,
             format=dataset.format,
             path=cls._normalize_relative_path(dataset.path),
             size_bytes=dataset.size_bytes,
@@ -54,6 +58,8 @@ class DatasetMetadata:
             created=self.created,
             modified=self.modified,
             tags=self.tags,
+            status=self.status,
+            priority=self.priority,
             format=self.format,
             path=self._normalize_relative_path(self.path),
             size_bytes=self.size_bytes,
@@ -72,6 +78,8 @@ class DatasetMetadata:
             "created": self._to_iso(self.created),
             "modified": self._to_iso(self.modified),
             "tags": list(self.tags),
+            "status": self.status,
+            "priority": self.priority,
             "format": self.format,
             "path": self._normalize_relative_path(self.path),
             "sizeBytes": self.size_bytes,
@@ -105,6 +113,8 @@ class DatasetMetadata:
             created=cls._from_iso(data.get("created")),
             modified=cls._from_iso(data.get("modified"), fallback=cls._from_iso(data.get("created"))),
             tags=cls._normalize_tags(data.get("tags", [])),
+            status=str(data.get("status") or ""),
+            priority=cls._to_int(data.get("priority"), default=0),
             format=str(data.get("format") or ""),
             path=cls._normalize_relative_path(str(data.get("path") or "")),
             size_bytes=cls._to_int(data.get("sizeBytes"), default=0),
